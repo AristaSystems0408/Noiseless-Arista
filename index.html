@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Noiseless · Arista Systems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deepest: #05070a;
+    --bg-dark: #0a0e14;
+    --bg-card: rgba(15, 20, 28, 0.6);
+    --bg-card-solid: #0f141c;
+    --border: rgba(0, 212, 170, 0.15);
+    --border-bright: rgba(0, 212, 170, 0.4);
+    --text: #e8ecf1;
+    --text-dim: #8893a2;
+    --text-mute: #566070;
+    --accent: #00d4aa;
+    --accent-glow: #00ffd0;
+    --accent-dim: #00a888;
+    --pink: #ff6b8a;
+    --blue: #4dabff;
+    --warning: #ffb84d;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-deepest);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: default;
+  }
+
+  /* ─── 3D Background Canvas ─── */
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='a'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+    mix-blend-mode: overlay;
+    opacity: 0.5;
+  }
+
+  /* Radial gradient fade */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center top, transparent 0%, var(--bg-deepest) 70%);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  main {
+    position: relative;
+    z-index: 3;
+  }
+
+  /* ═══ TOP BRAND BAR ═══ */
+  .brand-bar {
+    position: relative;
+    padding: 20px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    background: rgba(5, 7, 10, 0.6);
+    z-index: 100;
+  }
+
+  .brand-mark {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .brand-mark::before {
+    content: '';
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent-glow);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .brand-credit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-mute);
+  }
+
+  .brand-credit span {
+    color: var(--accent);
+  }
+
+  /* ═══ HERO ═══ */
+  .hero {
+    min-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 24px;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 8px 20px;
+    border: 1px solid var(--border-bright);
+    border-radius: 100px;
+    background: rgba(0, 212, 170, 0.05);
+    margin-bottom: 32px;
+    animation: fadeUp 0.8s ease-out;
+  }
+
+  .hero h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(52px, 10vw, 140px);
+    font-weight: 300;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    margin-bottom: 24px;
+    animation: fadeUp 1s ease-out 0.1s backwards;
+  }
+
+  .hero h1 .bold {
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-glow) 50%, var(--blue) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 2vw, 22px);
+    color: var(--text-dim);
+    max-width: 680px;
+    margin-bottom: 48px;
+    font-weight: 300;
+    line-height: 1.5;
+    animation: fadeUp 1s ease-out 0.2s backwards;
+  }
+
+  .hero-cta-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    animation: fadeUp 1s ease-out 0.3s backwards;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ═══ BUTTONS ═══ */
+  .btn {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 16px 32px;
+    border: none;
+    border-radius: 100px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.02em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg-deepest);
+    box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.5);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-glow);
+    box-shadow: 0 0 32px 4px rgba(0, 255, 208, 0.4);
+    transform: translateY(-2px);
+  }
+
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.6s;
+  }
+
+  .btn-primary:hover::after { left: 100%; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+    backdrop-filter: blur(12px);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(0, 212, 170, 0.08);
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .btn-icon { font-size: 18px; }
+
+  /* Hero scroll hint */
+  .scroll-hint {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--text-mute);
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  .scroll-hint::after {
+    content: '';
+    display: block;
+    margin: 8px auto 0;
+    width: 1px;
+    height: 30px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(8px); }
+  }
+
+  /* ═══ SECTION COMMON ═══ */
+  section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 100px 40px;
+    position: relative;
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .section-label::before {
+    content: '';
+    width: 30px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .section-title {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    margin-bottom: 60px;
+    max-width: 900px;
+  }
+
+  .section-title b { font-weight: 700; color: var(--accent); }
+
+  /* ═══ DOWNLOADS GRID ═══ */
+  .downloads {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 24px;
+  }
+
+  .download-card {
+    position: relative;
+    padding: 36px 32px;
+    background: var(--bg-card);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+  }
+
+  .download-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%),
+                rgba(0, 212, 170, 0.15), transparent 40%);
+    opacity: 0;
+    transition: opacity 0.4s;
+    pointer-events: none;
+  }
+
+  .download-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--border-bright);
+    background: rgba(15, 20, 28, 0.85);
+  }
+
+  .download-card:hover::before { opacity: 1; }
+
+  .card-step {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--text-mute);
+    margin-bottom: 20px;
+  }
+
+  .card-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-bright);
+    border-radius: 16px;
+    background: rgba(0, 212, 170, 0.05);
+    font-size: 24px;
+  }
+
+  .card-title {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+  }
+
+  .card-desc {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .card-meta {
+    display: flex;
+    gap: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-bottom: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .card-meta span strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ═══ STEPS ═══ */
+  .steps-wrapper {
+    position: relative;
+  }
+
+  .steps-wrapper::before {
+    content: '';
+    position: absolute;
+    left: 39px;
+    top: 80px;
+    bottom: 80px;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--border-bright) 10%, var(--border-bright) 90%, transparent);
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 32px;
+    padding: 40px 0;
+    position: relative;
+  }
+
+  .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--bg-dark);
+    border: 1px solid var(--border-bright);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s;
+  }
+
+  .step:hover .step-num {
+    background: var(--accent);
+    color: var(--bg-deepest);
+    box-shadow: 0 0 24px rgba(0, 212, 170, 0.4);
+  }
+
+  .step-content { padding-top: 18px; }
+
+  .step-title {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+  }
+
+  .step-desc {
+    color: var(--text-dim);
+    font-size: 16px;
+    margin-bottom: 20px;
+    line-height: 1.65;
+  }
+
+  .step-list {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+  }
+
+  .step-list li {
+    padding: 10px 0 10px 24px;
+    color: var(--text-dim);
+    position: relative;
+    font-size: 15px;
+  }
+
+  .step-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 18px;
+    width: 10px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  .step-list li strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .step-code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    background: rgba(0, 212, 170, 0.08);
+    border: 1px solid var(--border-bright);
+    color: var(--accent);
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+
+  /* Screenshot placeholders */
+  .screenshot {
+    margin: 24px 0;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-bright);
+    background: var(--bg-card-solid);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    transition: transform 0.4s, border-color 0.3s;
+  }
+
+  .screenshot:has(.screenshot-placeholder) {
+    aspect-ratio: 16 / 9;
+  }
+
+  .screenshot:hover {
+    transform: scale(1.01);
+    border-color: var(--accent);
+  }
+
+  .screenshot img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .screenshot-placeholder {
+    text-align: center;
+    padding: 40px;
+  }
+
+  .screenshot-placeholder .sp-icon {
+    font-size: 40px;
+    color: var(--accent);
+    opacity: 0.5;
+    margin-bottom: 16px;
+  }
+
+  .screenshot-placeholder .sp-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--text-mute);
+    text-transform: uppercase;
+  }
+
+  .screenshot-placeholder .sp-hint {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Screenshot corner dots */
+  .screenshot::before,
+  .screenshot::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border: 1px solid var(--accent);
+  }
+
+  .screenshot::before {
+    top: 12px;
+    left: 12px;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .screenshot::after {
+    bottom: 12px;
+    right: 12px;
+    border-left: none;
+    border-top: none;
+  }
+
+  /* ═══ INFO BOX ═══ */
+  .info-box {
+    background: rgba(255, 184, 77, 0.05);
+    border: 1px solid rgba(255, 184, 77, 0.3);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 24px 0;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .info-box .ib-icon {
+    color: var(--warning);
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .info-box p {
+    color: var(--text-dim);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .info-box strong { color: var(--warning); }
+
+  /* ═══ FOOTER ═══ */
+  footer {
+    padding: 80px 40px 40px;
+    border-top: 1px solid var(--border);
+    margin-top: 100px;
+    text-align: center;
+    position: relative;
+    z-index: 3;
+  }
+
+  .footer-mark {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, var(--accent), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+  }
+
+  .footer-team {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .footer-team b { color: var(--accent); font-weight: 700; }
+
+  .help-wrap {
+    max-width: 720px;
+    margin: 80px auto 0;
+    padding: 0 40px;
+    position: relative;
+    z-index: 3;
+  }
+
+  .help-box {
+    background: rgba(0, 212, 170, 0.05);
+    border: 1px solid var(--border-bright);
+    margin: 0;
+  }
+
+  .help-box .ib-icon { color: var(--accent); }
+  .help-box p { color: var(--text); }
+  .help-box strong { color: var(--accent); }
+  .help-box b { color: var(--blue); font-weight: 700; }
+
+  .footer-company {
+    color: var(--text-mute);
+    font-size: 14px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .brand-bar { padding: 16px 20px; flex-direction: column; gap: 8px; text-align: center; }
+    section { padding: 60px 20px; }
+    .step { grid-template-columns: 60px 1fr; gap: 20px; padding: 24px 0; }
+    .step-num { width: 60px; height: 60px; font-size: 11px; }
+    .step-title { font-size: 22px; }
+    .steps-wrapper::before { left: 29px; }
+  }
+
+  /* Smooth fade-in on scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- ═══ BRAND BAR ═══ -->
+<div class="brand-bar">
+  <div class="brand-credit">
+    Developed and Created by <span>AI Automation Team</span> · Arista Systems Pvt Ltd
+  </div>
+</div>
+
+<main>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+  <div class="hero-tag">Active Noise Cancellation · v3.1</div>
+  <h1>Mute the <span class="bold">world.</span><br>Not your <span class="bold">voice.</span></h1>
+  <p class="hero-sub">
+    Some people won't learn office etiquette. You don't have to wait for them.
+  </p>
+  <div class="hero-cta-row">
+    <a href="#downloads" class="btn btn-primary">
+      <span class="btn-icon">↓</span> Download Now
+    </a>
+    <a href="#setup" class="btn btn-secondary">
+      Setup Guide
+    </a>
+  </div>
+</section>
+
+<!-- ═══ DOWNLOADS ═══ -->
+<section id="downloads">
+  <div class="section-label">01 · DOWNLOADS</div>
+  <h2 class="section-title">Get <b>both files</b><br>to get started.</h2>
+
+  <div class="downloads">
+    <div class="download-card reveal">
+      <div class="card-step">FILE 01 · DRIVER</div>
+      <div class="card-icon">⚡</div>
+      <div class="card-title">VB-CABLE Driver</div>
+      <div class="card-desc">
+        Virtual audio cable driver. Creates a virtual microphone that Zoom/Meet
+        can use as input. Required one-time install.
+      </div>
+      <div class="card-meta">
+        <span><strong>~3 MB</strong> Size</span>
+        <span><strong>ZIP</strong> Format</span>
+        <span><strong>Admin</strong> Required</span>
+      </div>
+      <a href="VBCABLE_Driver_Pack43.zip" download class="btn btn-secondary" style="width: 100%; justify-content: center;">
+        <span class="btn-icon">↓</span> Download Driver
+      </a>
+    </div>
+
+    <div class="download-card reveal">
+      <div class="card-step">FILE 02 · APPLICATION</div>
+      <div class="card-icon">◆</div>
+      <div class="card-title">Noiseless Installer</div>
+      <div class="card-desc">
+        The main application. Installs to Program Files and creates a desktop
+        shortcut. Open, calibrate, and start cancelling noise.
+      </div>
+      <div class="card-meta">
+        <span><strong>~80 MB</strong> Size</span>
+        <span><strong>EXE</strong> Format</span>
+        <span><strong>Win 10/11</strong> Only</span>
+      </div>
+      <a href="noise_cancellation_setup.exe" download class="btn btn-primary" style="width: 100%; justify-content: center;">
+        <span class="btn-icon">↓</span> Download Noiseless
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ SETUP STEPS ═══ -->
+<section id="setup">
+  <div class="section-label">02 · COMPLETE SETUP GUIDE</div>
+  <h2 class="section-title">From download to<br><b>crystal-clear calls</b> in minutes.</h2>
+
+  <div class="steps-wrapper">
+
+    <!-- STEP 1 -->
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <div class="step-content">
+        <h3 class="step-title">Install VB-CABLE Driver</h3>
+        <p class="step-desc">
+          VB-CABLE creates a virtual microphone on your system. This is what Zoom/Meet
+          will use to receive your cleaned audio.
+        </p>
+        <ul class="step-list">
+          <li>Download <strong>VBCABLE_Driver_Pack43.zip</strong> from the section above</li>
+          <li>Right-click the zip file → <strong>Extract All</strong></li>
+          <li>Open the extracted folder</li>
+          <li>Right-click <span class="step-code">VBCABLE_Setup_x64.exe</span> → <strong>Run as Administrator</strong></li>
+          <li>Click <strong>Install Driver</strong> in the installer window</li>
+          <li><strong>Restart your computer</strong> (this is mandatory)</li>
+        </ul>
+
+        <div class="screenshot">
+          <img src="images/01-vbcable-install.png" alt="VB-CABLE Installer Window">
+        </div>
+
+        <div class="info-box">
+          <span class="ib-icon">⚠</span>
+          <p><strong>Important:</strong> If you skip the restart, VB-CABLE won't appear as an audio device. Restart before proceeding to Step 2.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step reveal">
+      <div class="step-num">02</div>
+      <div class="step-content">
+        <h3 class="step-title">Install Noiseless</h3>
+        <p class="step-desc">
+          Run the Noiseless installer to set up the main noise cancellation application.
+        </p>
+        <ul class="step-list">
+          <li>Download <strong>noise_cancellation_setup.exe</strong> from above</li>
+          <li>Double-click to launch the installer</li>
+          <li>Click <strong>Next</strong> through the wizard</li>
+          <li>When finished, check <strong>Launch Noiseless</strong> and click <strong>Finish</strong></li>
+        </ul>
+
+        <div class="screenshot">
+          <img src="images/Noiseless_setup_installation.png" alt="Noiseless Installer Wizard">
+        </div>
+
+        <p class="step-desc" style="margin-top: 20px;">
+          A <strong>Noiseless shortcut</strong> will appear on your desktop.
+          Double-click it anytime to launch the app.
+        </p>
+
+        <div class="screenshot">
+          <img src="images/Noiseless_app_sss.png" alt="Noiseless Desktop Shortcut">
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step reveal">
+      <div class="step-num">03</div>
+      <div class="step-content">
+        <h3 class="step-title">Calibrate Your Voice</h3>
+        <p class="step-desc">
+          Noiseless needs to learn your voice to separate it from background noise. This takes 7 seconds.
+        </p>
+        <ul class="step-list">
+          <li>Open Noiseless from your desktop</li>
+          <li>Select your <strong>headphone microphone</strong> from the dropdown (not the webcam mic)</li>
+          <li>Adjust the <strong>Noise Cancellation slider</strong> to <strong>95%</strong></li>
+          <li>Click <strong>CALIBRATE</strong></li>
+          <li>When prompted, <strong>stay silent</strong> for 3 seconds</li>
+          <li>When prompted, <strong>speak normally</strong> for 4 seconds (say: "Hello, testing the noise cancellation")</li>
+          <li>Wait for the "Calibrated" confirmation</li>
+        </ul>
+
+        <div class="screenshot">
+          <img src="images/Calibrate_SS.png" alt="Noiseless Dashboard - Calibration Screen">
+        </div>
+
+        <div class="info-box">
+          <span class="ib-icon">💡</span>
+          <p><strong>Pro tip:</strong> Calibrate in the environment where you'll be taking calls. If colleagues are talking, let them talk — this helps Noiseless learn the exact noise pattern to remove.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step reveal">
+      <div class="step-num">04</div>
+      <div class="step-content">
+        <h3 class="step-title">Start Noise Cancellation</h3>
+        <p class="step-desc">
+          With calibration done, activate the noise suppression engine.
+        </p>
+        <ul class="step-list">
+          <li>Click the large <strong>START</strong> button</li>
+          <li>Speak into your mic — the <strong>input graph</strong> shows your voice</li>
+          <li>The <strong>output graph</strong> shows the cleaned audio sent to meetings</li>
+          <li>The status should display <strong>● VOICE DETECTED</strong> when you speak</li>
+          <li>And <strong>● MUTED</strong> when you're silent</li>
+          <li>Keep the app running in the background during your entire call</li>
+        </ul>
+
+        <div class="screenshot">
+          <img src="images/Start_Noise_Cancellation.png" alt="Noiseless Dashboard - Active with Graphs">
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="step reveal">
+      <div class="step-num">05</div>
+      <div class="step-content">
+        <h3 class="step-title">Configure Google Meet</h3>
+        <p class="step-desc">
+          Tell Google Meet to use the virtual microphone (the cleaned audio from Noiseless).
+        </p>
+        <ul class="step-list">
+          <li>Open Google Meet and join your meeting</li>
+          <li>Click the <strong>three dots</strong> (⋮) in the bottom toolbar → <strong>Settings</strong></li>
+          <li>Click the <strong>Audio</strong> tab on the left</li>
+          <li>Change <strong>Microphone</strong> to: <span class="step-code">CABLE Output (VB-Audio Virtual Cable)</span></li>
+          <li>Keep your <strong>Speaker</strong> set to your headphones</li>
+          <li>Close settings — you're done!</li>
+        </ul>
+
+        <div class="screenshot">
+          <img src="images/Google_meet.png" alt="Google Meet Audio Settings">
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 6 -->
+    <div class="step reveal">
+      <div class="step-num">06</div>
+      <div class="step-content">
+        <h3 class="step-title">Configure Zoom</h3>
+        <p class="step-desc">
+          Same idea for Zoom — point it at the virtual cable.
+        </p>
+        <ul class="step-list">
+          <li>Open Zoom and click the <strong>gear icon</strong> (Settings)</li>
+          <li>Click the <strong>Audio</strong> tab on the left</li>
+          <li>Under <strong>Microphone</strong>, click the dropdown</li>
+          <li>Select: <span class="step-code">CABLE Output (VB-Audio Virtual Cable)</span></li>
+          <li>Keep <strong>Speaker</strong> on your headphones</li>
+          <li>Uncheck <strong>"Automatically adjust microphone volume"</strong></li>
+          <li>Uncheck Zoom's built-in <strong>Background noise suppression</strong> (we're handling that!)</li>
+        </ul>
+
+        <div class="screenshot">
+          <img src="images/Zoom_meet.png" alt="Zoom Audio Settings">
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 7 -->
+    <div class="step reveal">
+      <div class="step-num">07</div>
+      <div class="step-content">
+        <h3 class="step-title">You're Ready</h3>
+        <p class="step-desc">
+          Your calls are now protected from background noise. Here's your daily workflow:
+        </p>
+        <ul class="step-list">
+          <li><strong>Before every call</strong> → Open Noiseless from desktop</li>
+          <li>Click <strong>START</strong> (calibration persists — no need to recalibrate)</li>
+          <li>Join your Meet/Zoom call normally</li>
+          <li>When the call ends, click <strong>STOP</strong> in Noiseless (or just close it)</li>
+        </ul>
+
+        <div class="info-box" style="background: rgba(0, 212, 170, 0.05); border-color: var(--border-bright);">
+          <span class="ib-icon" style="color: var(--accent)">✓</span>
+          <p style="color: var(--text);">
+            <strong style="color: var(--accent)">All set.</strong> Your colleagues will no longer hear office chatter,
+            keyboard clicks, or any background noise during your calls. If the client hears background sounds
+            anyway, bump the slider up to 100%.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</main>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="help-wrap">
+  <div class="info-box help-box">
+    <span class="ib-icon">✉</span>
+    <p>
+      <strong>Need help?</strong> For any installation related queries, please reach out to the
+      <b>IT / Networking Team</b>.
+    </p>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-mark">NOISELESS</div>
+  <div class="footer-team">Developed and Created by <b>AI Automation Team</b></div>
+  <div class="footer-company">Arista Systems Pvt Ltd · Internal Tool · v3.1</div>
+</footer>
+
+
+<!-- ═══ 3D BACKGROUND SCRIPT ═══ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+  // ─── Three.js Sound Wave 3D Background ───
+  const canvas = document.getElementById('bg-canvas');
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x05070a, 0.0015);
+
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+  camera.position.set(0, 40, 180);
+
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+
+  // ─── Waveform Plane (floating grid that ripples like sound waves) ───
+  const gridSize = 180;
+  const segments = 80;
+  const geometry = new THREE.PlaneGeometry(gridSize * 2, gridSize * 2, segments, segments);
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 },
+      uColor1: { value: new THREE.Color(0x00d4aa) },
+      uColor2: { value: new THREE.Color(0x4dabff) },
+      uMouseX: { value: 0 },
+      uMouseY: { value: 0 }
+    },
+    vertexShader: `
+      uniform float uTime;
+      uniform float uMouseX;
+      uniform float uMouseY;
+      varying vec3 vPosition;
+      varying float vElevation;
+
+      // Simplex noise function
+      vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+      vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
+      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+      float snoise(vec3 v) {
+        const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+        const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+        vec3 i = floor(v + dot(v, C.yyy));
+        vec3 x0 = v - i + dot(i, C.xxx);
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min(g.xyz, l.zxy);
+        vec3 i2 = max(g.xyz, l.zxy);
+        vec3 x1 = x0 - i1 + C.xxx;
+        vec3 x2 = x0 - i2 + C.yyy;
+        vec3 x3 = x0 - D.yyy;
+        i = mod289(i);
+        vec4 p = permute(permute(permute(
+          i.z + vec4(0.0, i1.z, i2.z, 1.0))
+        + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+        + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+        float n_ = 0.142857142857;
+        vec3 ns = n_ * D.wyz - D.xzx;
+        vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_);
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+        vec4 b0 = vec4(x.xy, y.xy);
+        vec4 b1 = vec4(x.zw, y.zw);
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww;
+        vec3 p0 = vec3(a0.xy, h.x);
+        vec3 p1 = vec3(a0.zw, h.y);
+        vec3 p2 = vec3(a1.xy, h.z);
+        vec3 p3 = vec3(a1.zw, h.w);
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3)));
+        p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        m = m * m;
+        return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3)));
+      }
+
+      void main() {
+        vPosition = position;
+        vec3 pos = position;
+
+        float dist = length(pos.xy) * 0.015;
+        float wave1 = sin(dist * 3.0 - uTime * 1.5) * 3.0;
+        float wave2 = sin(dist * 6.0 - uTime * 2.2) * 1.5;
+        float noise = snoise(vec3(pos.xy * 0.015, uTime * 0.3)) * 4.0;
+
+        float elevation = wave1 + wave2 + noise;
+        elevation *= smoothstep(gridSize, 0.0, dist * 100.0);
+        elevation *= 0.8;
+
+        vElevation = elevation;
+        pos.z += elevation;
+
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColor1;
+      uniform vec3 uColor2;
+      varying vec3 vPosition;
+      varying float vElevation;
+
+      void main() {
+        float mixStrength = (vElevation + 4.0) / 8.0;
+        vec3 color = mix(uColor2, uColor1, mixStrength);
+
+        float dist = length(vPosition.xy);
+        float alpha = smoothstep(180.0, 30.0, dist);
+        alpha *= 0.4 + abs(vElevation) * 0.15;
+
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+    transparent: true,
+    wireframe: true,
+    depthWrite: false
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.rotation.x = -Math.PI / 2.5;
+  mesh.position.y = -30;
+  scene.add(mesh);
+
+  // ─── Floating Particles ───
+  const particleCount = 200;
+  const particles = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+  const colors = new Float32Array(particleCount * 3);
+
+  for (let i = 0; i < particleCount; i++) {
+    positions[i*3] = (Math.random() - 0.5) * 400;
+    positions[i*3+1] = (Math.random() - 0.3) * 150;
+    positions[i*3+2] = (Math.random() - 0.5) * 300;
+
+    const isAccent = Math.random() > 0.5;
+    colors[i*3] = isAccent ? 0.0 : 0.3;
+    colors[i*3+1] = isAccent ? 0.83 : 0.67;
+    colors[i*3+2] = isAccent ? 0.67 : 1.0;
+  }
+
+  particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+  const particleMaterial = new THREE.PointsMaterial({
+    size: 1.2,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.6,
+    sizeAttenuation: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
+  });
+
+  const particleSystem = new THREE.Points(particles, particleMaterial);
+  scene.add(particleSystem);
+
+  // ─── Mouse interaction ───
+  let mouseX = 0, mouseY = 0;
+  document.addEventListener('mousemove', (e) => {
+    mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+    mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  // ─── Scroll camera follow ───
+  let scrollY = 0;
+  window.addEventListener('scroll', () => {
+    scrollY = window.scrollY;
+  });
+
+  // ─── Animation loop ───
+  const clock = new THREE.Clock();
+  function animate() {
+    const elapsed = clock.getElapsedTime();
+    material.uniforms.uTime.value = elapsed;
+
+    // Camera parallax with mouse and scroll
+    camera.position.x += (mouseX * 15 - camera.position.x) * 0.04;
+    camera.position.y += ((40 - scrollY * 0.02) + mouseY * 5 - camera.position.y) * 0.04;
+    camera.lookAt(0, -30, 0);
+
+    // Particles drift upward
+    const posAttr = particles.attributes.position;
+    for (let i = 0; i < particleCount; i++) {
+      posAttr.array[i*3+1] += 0.1;
+      if (posAttr.array[i*3+1] > 150) posAttr.array[i*3+1] = -50;
+    }
+    posAttr.needsUpdate = true;
+    particleSystem.rotation.y = elapsed * 0.02;
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  // ─── Resize handler ───
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ─── Reveal-on-scroll animation ───
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ─── Card hover tracking (for radial glow) ───
+  document.querySelectorAll('.download-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      card.style.setProperty('--mx', `${x}%`);
+      card.style.setProperty('--my', `${y}%`);
+    });
+  });
+</script>
+
+</body>
+</html>
