@@ -197,6 +197,241 @@ main {
   background-clip: text;
 }
 
+.glitch-line {
+  position: relative;
+  display: inline-block;
+}
+
+.glitch-strike {
+  position: relative;
+  display: inline-block;
+  isolation: isolate;
+}
+
+/* Base keeps the layout width reserved; pieces are absolutely overlaid */
+.cut-base {
+  visibility: hidden;
+}
+
+.cut-top,
+.cut-bottom {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  will-change: transform, opacity, filter;
+}
+
+.cut-top {
+  clip-path: polygon(0 0, 100% 0, 100% 50%, 0 53%);
+  animation: cutTopFall 1.5s 0.35s cubic-bezier(0.22, 1, 0.32, 1) forwards;
+  transform-origin: 80% 100%;
+}
+
+.cut-bottom {
+  clip-path: polygon(0 53%, 100% 50%, 100% 100%, 0 100%);
+  animation: cutBottomFall 1.6s 0.35s cubic-bezier(0.22, 1, 0.32, 1) forwards;
+  transform-origin: 20% 0%;
+}
+
+@keyframes cutTopFall {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 0 transparent); }
+  15%  { transform: translate(-6px, -10px) rotate(-3deg); opacity: 1; }
+  100% { transform: translate(-40px, -55px) rotate(-10deg); opacity: 0; filter: drop-shadow(5px -8px 12px rgba(255, 77, 109, 0.45)); }
+}
+
+@keyframes cutBottomFall {
+  0%   { transform: translate(0, 0) rotate(0deg); opacity: 1; filter: drop-shadow(0 0 0 transparent); }
+  15%  { transform: translate(6px, 12px) rotate(3deg); opacity: 1; }
+  100% { transform: translate(42px, 62px) rotate(11deg); opacity: 0; filter: drop-shadow(-5px 8px 12px rgba(255, 77, 109, 0.45)); }
+}
+
+/* Actual sword SVG swinging across the word */
+.sword-svg {
+  position: absolute;
+  width: clamp(260px, 80%, 440px);
+  height: auto;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  z-index: 10;
+  filter:
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 0 14px rgba(255, 255, 255, 0.35));
+  transform-origin: 85% 50%;
+  opacity: 0;
+  animation: swordSwing 1.05s cubic-bezier(0.3, 0.1, 0.3, 1) 0.05s forwards;
+}
+
+@keyframes swordSwing {
+  0%   { transform: translate(-180%, -170%) rotate(-38deg) scale(1.05); opacity: 0; filter: drop-shadow(0 0 0 transparent) blur(1.5px); }
+  12%  { opacity: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 14px rgba(255,255,255,0.5)) blur(1.2px); }
+  45%  { transform: translate(-85%, -55%) rotate(-18deg) scale(1); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 22px rgba(255,255,255,0.7)) blur(0.6px); }
+  58%  { transform: translate(-30%, -20%) rotate(-10deg) scale(1); filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 30px #fff) blur(0.3px); }
+  85%  { transform: translate(70%, 50%) rotate(8deg) scale(0.97); opacity: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)) drop-shadow(0 0 12px rgba(255,255,255,0.3)) blur(0.8px); }
+  100% { transform: translate(140%, 120%) rotate(22deg) scale(0.9); opacity: 0; filter: blur(2px); }
+}
+
+/* Impact sparks at the moment the blade bites the word */
+.spark {
+  position: absolute;
+  top: 50%;
+  left: 45%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #ffd580 40%, rgba(255, 180, 80, 0) 70%);
+  pointer-events: none;
+  z-index: 11;
+  opacity: 0;
+  box-shadow: 0 0 12px rgba(255, 220, 140, 0.9);
+}
+
+.spark.s1 { animation: sparkFly 0.7s ease-out 0.55s forwards; --tx: -55px; --ty: -42px; }
+.spark.s2 { animation: sparkFly 0.75s ease-out 0.55s forwards; --tx:  60px; --ty: -48px; }
+.spark.s3 { animation: sparkFly 0.65s ease-out 0.55s forwards; --tx: -40px; --ty:  55px; }
+.spark.s4 { animation: sparkFly 0.8s  ease-out 0.55s forwards; --tx:  75px; --ty:  38px; }
+.spark.s5 { animation: sparkFly 0.6s  ease-out 0.55s forwards; --tx: -80px; --ty:  10px; }
+.spark.s6 { animation: sparkFly 0.7s  ease-out 0.55s forwards; --tx:  90px; --ty: -12px; }
+
+@keyframes sparkFly {
+  0%   { transform: translate(0, 0) scale(0.6); opacity: 0; }
+  10%  { opacity: 1; transform: translate(0, 0) scale(1.4); }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0.3); opacity: 0; }
+}
+
+/* The sword slash — a diagonal blade that grows left→right */
+.glitch-strike::before {
+  content: '';
+  position: absolute;
+  left: -6%;
+  top: 55%;
+  height: 6px;
+  width: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 77, 109, 0.9) 8%,
+    #ff4d6d 30%,
+    #ffffff 50%,
+    #ff4d6d 70%,
+    rgba(255, 77, 109, 0.9) 92%,
+    transparent 100%
+  );
+  transform: translateY(-50%) rotate(-5deg);
+  transform-origin: left center;
+  box-shadow:
+    0 0 12px rgba(255, 77, 109, 0.9),
+    0 0 28px rgba(255, 77, 109, 0.6),
+    0 0 48px rgba(255, 255, 255, 0.35);
+  animation: swordSlash 0.55s cubic-bezier(0.22, 1, 0.3, 1) 0s forwards;
+  z-index: 2;
+  pointer-events: none;
+  filter: blur(0.4px);
+}
+
+/* Bright hot flare riding the tip of the blade */
+.glitch-strike::after {
+  content: '';
+  position: absolute;
+  left: -6%;
+  top: 55%;
+  width: 70px;
+  height: 38px;
+  background: radial-gradient(
+    ellipse at center,
+    #ffffff 0%,
+    rgba(255, 240, 245, 0.9) 18%,
+    rgba(255, 77, 109, 0.6) 40%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%) rotate(-5deg);
+  transform-origin: center center;
+  animation: swordFlare 0.6s cubic-bezier(0.22, 1, 0.3, 1) 0s forwards;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0;
+}
+
+@keyframes swordSlash {
+  0%   { width: 0; opacity: 0; }
+  8%   { opacity: 1; }
+  100% { width: 115%; opacity: 1; }
+}
+
+@keyframes swordFlare {
+  0%   { left: -6%; opacity: 0; transform: translate(-50%, -50%) rotate(-5deg) scale(0.4); }
+  15%  { opacity: 1; transform: translate(-50%, -50%) rotate(-5deg) scale(1.1); }
+  90%  { left: 110%; opacity: 0.9; transform: translate(-50%, -50%) rotate(-5deg) scale(0.9); }
+  100% { left: 115%; opacity: 0; transform: translate(-50%, -50%) rotate(-5deg) scale(0.6); }
+}
+
+.glitch-line.glitching {
+  animation: glitchShake 0.52s cubic-bezier(.36,.07,.19,.97) forwards;
+  text-shadow:
+    0.04em 0 0 rgba(255, 0, 128, 0.85),
+    -0.04em -0.02em 0 rgba(0, 255, 249, 0.85),
+    0.02em 0.02em 0 rgba(77, 171, 255, 0.7);
+}
+
+.glitch-line.glitching::before,
+.glitch-line.glitching::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  background: var(--bg-deepest);
+  overflow: hidden;
+  font-weight: 300;
+}
+
+.glitch-line.glitching::before {
+  color: #ff0080;
+  text-shadow: 2px 0 #ff0080, -2px 0 transparent;
+  animation: glitchTop 0.52s steps(3, end) forwards;
+  mix-blend-mode: screen;
+}
+
+.glitch-line.glitching::after {
+  color: #00fff9;
+  text-shadow: -2px 0 #00fff9, 2px 0 transparent;
+  animation: glitchBottom 0.52s steps(3, end) forwards;
+  mix-blend-mode: screen;
+}
+
+@keyframes glitchShake {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(-3px, 1px) skewX(-2deg); }
+  20%  { transform: translate(3px, -2px) skewX(1deg); }
+  30%  { transform: translate(-2px, 2px) skewX(0deg); }
+  40%  { transform: translate(2px, -1px) skewX(-1deg); }
+  50%  { transform: translate(-4px, 0) skewX(2deg); }
+  60%  { transform: translate(3px, 2px) skewX(0deg); }
+  70%  { transform: translate(-1px, -2px) skewX(-1deg); }
+  80%  { transform: translate(2px, 1px) skewX(1deg); }
+  90%  { transform: translate(-2px, 0) skewX(0deg); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes glitchTop {
+  0%   { clip-path: polygon(0 0, 100% 0, 100% 33%, 0 35%); transform: translate(-4px, 0); }
+  25%  { clip-path: polygon(0 10%, 100% 8%, 100% 28%, 0 30%); transform: translate(-7px, 1px); }
+  50%  { clip-path: polygon(0 2%, 100% 4%, 100% 40%, 0 38%); transform: translate(5px, -1px); }
+  75%  { clip-path: polygon(0 15%, 100% 18%, 100% 22%, 0 20%); transform: translate(-3px, 2px); }
+  100% { clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%); transform: translate(0, 0); }
+}
+
+@keyframes glitchBottom {
+  0%   { clip-path: polygon(0 65%, 100% 63%, 100% 100%, 0 100%); transform: translate(4px, 0); }
+  25%  { clip-path: polygon(0 70%, 100% 72%, 100% 90%, 0 88%); transform: translate(7px, 1px); }
+  50%  { clip-path: polygon(0 60%, 100% 58%, 100% 100%, 0 100%); transform: translate(-5px, -1px); }
+  75%  { clip-path: polygon(0 80%, 100% 78%, 100% 95%, 0 97%); transform: translate(3px, 2px); }
+  100% { clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%); transform: translate(0, 0); }
+}
+
 .hero-sub {
   font-size: clamp(16px, 2vw, 22px);
   color: var(--text-dim);
