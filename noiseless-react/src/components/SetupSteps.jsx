@@ -27,51 +27,37 @@ export default function SetupSteps() {
 
       <div className="steps-wrapper">
         <Step num="01">
-          <h3 className="step-title">Install VB-CABLE Driver</h3>
+          <h3 className="step-title">Install Noiseless</h3>
           <p className="step-desc">
-            VB-CABLE creates a virtual microphone on your system. This is what Zoom/Meet will use to
-            receive your cleaned audio.
+            One installer sets up everything: the Noiseless app and the{' '}
+            <strong>VB-CABLE</strong> audio driver, which creates the virtual microphone your
+            meetings receive the cleaned audio from.
           </p>
           <ul className="step-list">
-            <li>Download <strong>VBCABLE_Driver_Pack43.zip</strong> from the section above</li>
-            <li>Right-click the zip file → <strong>Extract All</strong></li>
-            <li>Open the extracted folder</li>
+            <li>Download <strong>noise_cancellation_setup.exe</strong> from above</li>
+            <li>Double-click to launch the installer and click <strong>Yes</strong> to allow it</li>
             <li>
-              Right-click <span className="step-code">VBCABLE_Setup_x64.exe</span> →{' '}
-              <strong>Run as Administrator</strong>
+              Keep both boxes ticked: <strong>Install VB-CABLE virtual audio driver</strong> (only
+              shown if it isn't installed yet) and <strong>Start Noiseless when I sign in</strong>
             </li>
-            <li>Click <strong>Install Driver</strong> in the installer window</li>
-            <li><strong>Restart your computer</strong> (this is mandatory)</li>
+            <li>
+              When Windows asks <strong>"Would you like to install this device software?"</strong>{' '}
+              (publisher <strong>Vincent Burel / VB-Audio</strong>), click <strong>Install</strong>
+            </li>
+            <li>
+              If setup asks to <strong>restart your computer</strong>, choose{' '}
+              <strong>Yes, restart now</strong>. Noiseless starts by itself after you sign in
+            </li>
           </ul>
-
-          <Screenshot src="/images/01-vbcable-install.png" alt="VB-CABLE Installer Window" />
 
           <div className="info-box">
             <span className="ib-icon">⚠</span>
             <p>
-              <strong>Important:</strong> If you skip the restart, VB-CABLE won't appear as an audio
-              device. Restart before proceeding to Step 2.
+              <strong>Important:</strong> the restart is needed the first time, so the VB-CABLE
+              microphone shows up in Zoom, Teams and Meet. If you decline the Windows driver prompt,
+              run the installer again.
             </p>
           </div>
-        </Step>
-
-        <Step num="02">
-          <h3 className="step-title">Install Noiseless</h3>
-          <p className="step-desc">
-            Run the Noiseless installer to set up the main noise cancellation application.
-          </p>
-          <ul className="step-list">
-            <li>Download <strong>noise_cancellation_setup.exe</strong> from above</li>
-            <li>Double-click to launch the installer</li>
-            <li>Click <strong>Next</strong> through the wizard</li>
-            <li>
-              Keep <strong>Start Noiseless when I sign in</strong> ticked, so meetings are detected
-              automatically
-            </li>
-            <li>
-              When finished, check <strong>Launch Noiseless</strong> and click <strong>Finish</strong>
-            </li>
-          </ul>
 
           <Screenshot
             src="/images/Noiseless_setup_installation.png"
@@ -88,7 +74,7 @@ export default function SetupSteps() {
           <Screenshot src="/images/Noiseless_app_sss.png" alt="Noiseless Desktop Shortcut" />
         </Step>
 
-        <Step num="03">
+        <Step num="02">
           <h3 className="step-title">Calibrate Your Voice (once)</h3>
           <p className="step-desc">
             Noiseless needs to learn your voice to separate it from background noise. This takes 7
@@ -127,7 +113,7 @@ export default function SetupSteps() {
           </div>
         </Step>
 
-        <Step num="04">
+        <Step num="03">
           <h3 className="step-title">Join a Meeting — Noiseless Asks</h3>
           <p className="step-desc">
             Noiseless watches for meetings in the background. As soon as Zoom, Teams, Webex, Slack,
@@ -166,7 +152,7 @@ export default function SetupSteps() {
           />
         </Step>
 
-        <Step num="05">
+        <Step num="04">
           <h3 className="step-title">Check Google Meet's Microphone (once)</h3>
           <p className="step-desc">
             Meet usually uses the Windows default mic already, so there's nothing to do. If the other
@@ -191,7 +177,7 @@ export default function SetupSteps() {
           <Screenshot src="/images/Google_meet.png" alt="Google Meet Audio Settings" />
         </Step>
 
-        <Step num="06">
+        <Step num="05">
           <h3 className="step-title">Check Zoom &amp; Teams (once)</h3>
           <p className="step-desc">
             Zoom's <strong>Same as System</strong> and Teams' <strong>Default device</strong> follow
@@ -220,7 +206,7 @@ export default function SetupSteps() {
           <Screenshot src="/images/Zoom_meet.png" alt="Zoom Audio Settings" />
         </Step>
 
-        <Step num="07">
+        <Step num="06">
           <h3 className="step-title">You're Ready</h3>
           <p className="step-desc">
             Your calls are now protected from background noise. Here's your daily workflow:
