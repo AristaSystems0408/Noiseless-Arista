@@ -41,11 +41,11 @@ export default function Downloads() {
           <div className="card-icon">◆</div>
           <div className="card-title">Noiseless Installer</div>
           <div className="card-desc">
-            The main application. Installs to Program Files and creates a desktop shortcut. Open,
-            calibrate, and start cancelling noise.
+            The main application. Runs in the system tray, detects when a meeting starts in Zoom,
+            Teams or your browser, and asks to turn on noise cancellation.
           </div>
           <div className="card-meta">
-            <span><strong>~80 MB</strong> Size</span>
+            <span><strong>~35 MB</strong> Size</span>
             <span><strong>EXE</strong> Format</span>
             <span><strong>Win 10/11</strong> Only</span>
           </div>

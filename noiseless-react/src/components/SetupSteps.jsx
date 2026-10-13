@@ -65,6 +65,10 @@ export default function SetupSteps() {
             <li>Double-click to launch the installer</li>
             <li>Click <strong>Next</strong> through the wizard</li>
             <li>
+              Keep <strong>Start Noiseless when I sign in</strong> ticked, so meetings are detected
+              automatically
+            </li>
+            <li>
               When finished, check <strong>Launch Noiseless</strong> and click <strong>Finish</strong>
             </li>
           </ul>
@@ -75,18 +79,21 @@ export default function SetupSteps() {
           />
 
           <p className="step-desc step-desc-mt">
-            A <strong>Noiseless shortcut</strong> will appear on your desktop. Double-click it
-            anytime to launch the app.
+            A <strong>Noiseless shortcut</strong> will appear on your desktop. Noiseless also lives
+            in the <strong>system tray</strong> (next to the clock): closing the window keeps it
+            running there, and right-clicking the icon gives Start/Stop, meeting detection on/off,
+            and Quit.
           </p>
 
           <Screenshot src="/images/Noiseless_app_sss.png" alt="Noiseless Desktop Shortcut" />
         </Step>
 
         <Step num="03">
-          <h3 className="step-title">Calibrate Your Voice</h3>
+          <h3 className="step-title">Calibrate Your Voice (once)</h3>
           <p className="step-desc">
             Noiseless needs to learn your voice to separate it from background noise. This takes 7
-            seconds.
+            seconds and is saved for your microphone, so you only do it once. If you skip it, the
+            first meeting prompt offers <strong>Calibrate &amp; start</strong> instead.
           </p>
           <ul className="step-list">
             <li>Open Noiseless from your desktop</li>
@@ -121,20 +128,37 @@ export default function SetupSteps() {
         </Step>
 
         <Step num="04">
-          <h3 className="step-title">Start Noise Cancellation</h3>
+          <h3 className="step-title">Join a Meeting — Noiseless Asks</h3>
           <p className="step-desc">
-            With calibration done, activate the noise suppression engine.
+            Noiseless watches for meetings in the background. As soon as Zoom, Teams, Webex, Slack,
+            Discord, or a Google Meet / Teams / Zoom call in Chrome or Edge starts using your
+            microphone, a card appears in the bottom-right corner:
           </p>
           <ul className="step-list">
-            <li>Click the large <strong>START</strong> button</li>
-            <li>Speak into your mic — the <strong>input graph</strong> shows your voice</li>
-            <li>The <strong>output graph</strong> shows the cleaned audio sent to meetings</li>
             <li>
-              The status should display <strong>● VOICE DETECTED</strong> when you speak
+              <strong>"Meeting detected — Zoom. Turn on noise cancellation?"</strong> → click{' '}
+              <strong>Start</strong> (or <strong>Not now</strong>)
             </li>
-            <li>And <strong>● MUTED</strong> when you're silent</li>
-            <li>Keep the app running in the background during your entire call</li>
+            <li>
+              Tick <strong>Always start automatically for Zoom</strong> to skip the question next time
+            </li>
+            <li>
+              While it runs, Windows' default microphone is switched to{' '}
+              <span className="step-code">CABLE Output</span>, so the meeting gets the cleaned audio
+            </li>
+            <li>
+              When the meeting ends, noise cancellation stops and your normal mic comes back by itself
+            </li>
+            <li>
+              You can still start it by hand: click <strong>START</strong> in the app or the tray menu
+            </li>
           </ul>
+          <p className="step-desc step-desc-mt">
+            In the app, the <strong>input graph</strong> shows your voice and the{' '}
+            <strong>output graph</strong> the cleaned audio sent to the meeting:{' '}
+            <strong>● VOICE DETECTED</strong> when you speak, <strong>● MUTED</strong> when you're
+            silent.
+          </p>
 
           <Screenshot
             src="/images/Start_Noise_Cancellation.png"
@@ -143,37 +167,47 @@ export default function SetupSteps() {
         </Step>
 
         <Step num="05">
-          <h3 className="step-title">Configure Google Meet</h3>
+          <h3 className="step-title">Check Google Meet's Microphone (once)</h3>
           <p className="step-desc">
-            Tell Google Meet to use the virtual microphone (the cleaned audio from Noiseless).
+            Meet usually uses the Windows default mic already, so there's nothing to do. If the other
+            side still hears background noise, check it once:
           </p>
           <ul className="step-list">
-            <li>Open Google Meet and join your meeting</li>
             <li>
-              Click the <strong>three dots</strong> (⋮) in the bottom toolbar →{' '}
+              In the meeting, click the <strong>three dots</strong> (⋮) in the bottom toolbar →{' '}
               <strong>Settings</strong>
             </li>
             <li>Click the <strong>Audio</strong> tab on the left</li>
             <li>
-              Change <strong>Microphone</strong> to:{' '}
+              Set <strong>Microphone</strong> to <strong>Default</strong>, or to{' '}
               <span className="step-code">CABLE Output (VB-Audio Virtual Cable)</span>
             </li>
             <li>Keep your <strong>Speaker</strong> set to your headphones</li>
-            <li>Close settings — you're done!</li>
+            <li>
+              If you turned Noiseless on after joining and Meet doesn't switch, rejoin the call
+            </li>
           </ul>
 
           <Screenshot src="/images/Google_meet.png" alt="Google Meet Audio Settings" />
         </Step>
 
         <Step num="06">
-          <h3 className="step-title">Configure Zoom</h3>
-          <p className="step-desc">Same idea for Zoom — point it at the virtual cable.</p>
+          <h3 className="step-title">Check Zoom &amp; Teams (once)</h3>
+          <p className="step-desc">
+            Zoom's <strong>Same as System</strong> and Teams' <strong>Default device</strong> follow
+            Noiseless automatically. Check once that they're selected:
+          </p>
           <ul className="step-list">
             <li>Open Zoom and click the <strong>gear icon</strong> (Settings)</li>
             <li>Click the <strong>Audio</strong> tab on the left</li>
             <li>Under <strong>Microphone</strong>, click the dropdown</li>
             <li>
-              Select: <span className="step-code">CABLE Output (VB-Audio Virtual Cable)</span>
+              Select <strong>Same as System</strong> (or{' '}
+              <span className="step-code">CABLE Output (VB-Audio Virtual Cable)</span>)
+            </li>
+            <li>
+              In Teams: <strong>Settings → Devices → Microphone</strong> →{' '}
+              <strong>Default device</strong>
             </li>
             <li>Keep <strong>Speaker</strong> on your headphones</li>
             <li>Uncheck <strong>"Automatically adjust microphone volume"</strong></li>
@@ -192,14 +226,11 @@ export default function SetupSteps() {
             Your calls are now protected from background noise. Here's your daily workflow:
           </p>
           <ul className="step-list">
-            <li><strong>Before every call</strong> → Open Noiseless from desktop</li>
+            <li>Join your Meet / Zoom / Teams call normally</li>
             <li>
-              Click <strong>START</strong> (calibration persists — no need to recalibrate)
+              Click <strong>Start</strong> on the Noiseless card (or let it start automatically)
             </li>
-            <li>Join your Meet/Zoom call normally</li>
-            <li>
-              When the call ends, click <strong>STOP</strong> in Noiseless (or just close it)
-            </li>
+            <li>Hang up — Noiseless stops and gives your normal mic back by itself</li>
           </ul>
 
           <div className="info-box info-box-success">
