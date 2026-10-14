@@ -5,7 +5,7 @@ export default function Footer() {
       <div className="footer-team">
         Developed indigenously by <b>AI Automation Team</b>
       </div>
-      <div className="footer-company">Arista Systems Pvt Ltd · Internal Tool · v3.1</div>
+      <div className="footer-company">Arista Systems Pvt Ltd · Internal Tool · v3.6</div>
     </footer>
   )
 }
