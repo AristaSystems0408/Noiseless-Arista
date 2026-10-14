@@ -132,11 +132,17 @@ export default function SetupSteps() {
               Tick <strong>Always turn on for Zoom</strong> to skip the question next time
             </li>
             <li>
-              While it's on, Windows' microphone is set to{' '}
-              <span className="step-code">CABLE Output</span>, so the meeting gets the cleaned audio
+              While Noiseless runs it is Windows' microphone{' '}
+              (<span className="step-code">CABLE Output</span>), so every meeting picks it up from the
+              start; your voice passes through untouched until you turn noise cancellation on
             </li>
             <li>
-              When the meeting ends, noise cancellation turns off and your normal mic comes back by itself
+              When the meeting ends, noise cancellation turns off by itself. Quitting Noiseless gives
+              Windows your normal mic back
+            </li>
+            <li>
+              If a meeting app is set to a specific microphone, Noiseless tells you to switch it to the
+              system default once
             </li>
             <li>
               You can also turn it on by hand with the big <strong>power button</strong> in the app, or
