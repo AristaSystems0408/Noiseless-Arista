@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 function Step({ num, children }) {
   return (
     <div className="step reveal">
@@ -15,16 +17,8 @@ function Screenshot({ src, alt }) {
   )
 }
 
-export default function SetupSteps() {
+function DesktopSteps() {
   return (
-    <section id="setup">
-      <div className="section-label">02 · COMPLETE SETUP GUIDE</div>
-      <h2 className="section-title">
-        From download to
-        <br />
-        <b>crystal-clear calls</b> in minutes.
-      </h2>
-
       <div className="steps-wrapper">
         <Step num="01">
           <h3 className="step-title">Install Noiseless</h3>
@@ -236,6 +230,154 @@ export default function SetupSteps() {
           </div>
         </Step>
       </div>
+  )
+}
+
+function ExtensionSteps() {
+  return (
+    <div className="steps-wrapper">
+      <Step num="01">
+        <h3 className="step-title">Download and Unzip</h3>
+        <p className="step-desc">
+          The extension works on its own: no installer, no audio driver, no admin rights. It cleans
+          your microphone inside Chrome or Edge for Google Meet, Microsoft Teams, Zoom and Webex.
+        </p>
+        <ul className="step-list">
+          <li>Download <strong>noiseless-extension.zip</strong> from the section above</li>
+          <li>Right-click the zip file → <strong>Extract All</strong> → <strong>Extract</strong></li>
+          <li>
+            You now have a folder called <span className="step-code">Noiseless-Extension</span>. Keep
+            it somewhere permanent (e.g. Documents): Chrome loads the extension from this folder
+          </li>
+        </ul>
+      </Step>
+
+      <Step num="02">
+        <h3 className="step-title">Add It to Chrome</h3>
+        <ul className="step-list">
+          <li>
+            Open a new tab and go to <span className="step-code">chrome://extensions</span> (in Edge:{' '}
+            <span className="step-code">edge://extensions</span>)
+          </li>
+          <li>Turn on <strong>Developer mode</strong> (top-right switch; in Edge it's on the left)</li>
+          <li>
+            Click <strong>Load unpacked</strong> and select the{' '}
+            <span className="step-code">Noiseless-Extension</span> folder
+          </li>
+          <li>
+            <strong>Noiseless — Meeting Noise Cancellation</strong> appears in the list. Click the
+            puzzle-piece icon in the toolbar and <strong>pin</strong> Noiseless so it's always visible
+          </li>
+        </ul>
+        <div className="info-box">
+          <span className="ib-icon">💡</span>
+          <p>
+            Chrome may show a banner about extensions in developer mode when it starts. That's normal
+            for extensions installed from a folder; click <strong>Keep</strong> (or close it).
+          </p>
+        </div>
+      </Step>
+
+      <Step num="03">
+        <h3 className="step-title">Join a Meeting — Click Start</h3>
+        <p className="step-desc">
+          Open Google Meet, Teams, Zoom or Webex in the browser. As soon as the meeting uses your
+          microphone, a card appears on the page:
+        </p>
+        <ul className="step-list">
+          <li>
+            <strong>"Meeting detected — turn on noise cancellation?"</strong> → click{' '}
+            <strong>Start</strong>
+          </li>
+          <li>
+            Tick <strong>Always start automatically</strong> to skip the question on that site next time
+          </li>
+          <li>
+            A small control stays at the bottom-left: <strong>● Noise cancellation · On</strong> with a{' '}
+            <strong>Stop</strong> button. Start or stop it any time; the call isn't interrupted
+          </li>
+          <li>
+            Nothing to change in the meeting's own settings: keep your usual microphone selected
+          </li>
+          <li>
+            Already in a call when you installed it? <strong>Refresh the meeting tab</strong> once
+          </li>
+        </ul>
+      </Step>
+
+      <Step num="04">
+        <h3 className="step-title">Fine-Tune (optional)</h3>
+        <p className="step-desc">Click the Noiseless icon in the toolbar during a meeting:</p>
+        <ul className="step-list">
+          <li><strong>Strength</strong> — 95% (default) lets only your own voice through; lower it if soft words get cut</li>
+          <li><strong>Calibrate (8 sec)</strong> — stay quiet 3 seconds, then speak 4 seconds; saved for your microphone</li>
+          <li>Live levels show your mic, what's sent, and how much background is removed</li>
+          <li>The toolbar icon shows <strong>ON</strong> / <strong>OFF</strong> for the meeting tab</li>
+        </ul>
+        <div className="info-box info-box-success">
+          <span className="ib-icon">✓</span>
+          <p>
+            <strong>All set.</strong> Use either the extension or the desktop app for a call, not both
+            at once. The desktop app also covers Zoom, Teams and other apps installed on your PC.
+          </p>
+        </div>
+      </Step>
+    </div>
+  )
+}
+
+const MODES = [
+  { id: 'desktop', label: 'Desktop app' },
+  { id: 'extension', label: 'Chrome extension' },
+]
+
+export default function SetupSteps() {
+  const [mode, setMode] = useState(() =>
+    typeof window !== 'undefined' && window.location.hash === '#setup-extension' ? 'extension' : 'desktop')
+
+  // "How to install the extension" links (#setup-extension) open the extension guide
+  useEffect(() => {
+    const onHash = () => {
+      if (window.location.hash === '#setup-extension') {
+        setMode('extension')
+        document.getElementById('setup')?.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+    onHash()
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
+
+  // The scroll-reveal observer only knows the steps present on page load: show switched-in ones
+  useEffect(() => {
+    document.querySelectorAll('#setup .reveal').forEach((el) => el.classList.add('visible'))
+  }, [mode])
+
+  return (
+    <section id="setup">
+      <div className="section-label">02 · COMPLETE SETUP GUIDE</div>
+      <h2 className="section-title">
+        From download to
+        <br />
+        <b>crystal-clear calls</b> in minutes.
+      </h2>
+
+      <div role="tablist" aria-label="Choose your setup"
+        style={{ display: 'inline-flex', gap: 4, padding: 4, margin: '8px 0 40px', borderRadius: 999,
+          border: '1px solid var(--border-bright)', background: 'rgba(255,255,255,0.03)' }}>
+        {MODES.map((m) => (
+          <button key={m.id} role="tab" type="button" aria-selected={mode === m.id}
+            onClick={() => setMode(m.id)}
+            style={{ border: 0, cursor: 'pointer', padding: '10px 22px', borderRadius: 999, font: 'inherit',
+              fontSize: 15, fontWeight: 600, transition: 'background .2s, color .2s',
+              background: mode === m.id ? '#00d4aa' : 'transparent',
+              color: mode === m.id ? '#05070a' : 'var(--text-dim)' }}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'desktop' ? <DesktopSteps /> : <ExtensionSteps />}
     </section>
   )
 }
