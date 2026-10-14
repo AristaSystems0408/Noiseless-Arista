@@ -28,7 +28,7 @@ export default function Downloads() {
             cancellation.
           </div>
           <div className="card-meta">
-            <span><strong>~39 MB</strong> Size</span>
+            <span><strong>~46 MB</strong> Size</span>
             <span><strong>EXE</strong> Format</span>
             <span><strong>Win 10/11</strong> 64-bit</span>
           </div>

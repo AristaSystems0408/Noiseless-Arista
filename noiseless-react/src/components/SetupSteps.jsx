@@ -74,11 +74,12 @@ export default function SetupSteps() {
         </Step>
 
         <Step num="02">
-          <h3 className="step-title">Calibrate Your Voice (once)</h3>
+          <h3 className="step-title">Calibrate Your Voice (optional, once)</h3>
           <p className="step-desc">
-            Noiseless learns your voice and your room so it can tell them apart. It takes 8 seconds
-            and is saved for your microphone, so you only do it once. If you skip it, the first
-            meeting card offers <strong>Calibrate &amp; turn on</strong> instead.
+            Noiseless works straight away: its speech-recognising engine (the same one as the
+            Noiseless browser extension) removes anything that isn't your voice — fans, typing,
+            clatter, even a tap on the mic — and learns how loud you are as you talk. Calibrating
+            once (8 seconds, saved for your microphone) makes it precise from the first word.
           </p>
 
           <Screenshot src="/images/app-setup.png" alt="Noiseless window before calibration" />
