@@ -67,48 +67,49 @@ export default function SetupSteps() {
           <p className="step-desc step-desc-mt">
             A <strong>Noiseless shortcut</strong> will appear on your desktop. Noiseless also lives
             in the <strong>system tray</strong> (next to the clock): closing the window keeps it
-            running there, and right-clicking the icon gives Start/Stop, meeting detection on/off,
-            and Quit.
+            running there, and right-clicking the icon lets you turn noise cancellation on or off,
+            switch meeting detection, or quit.
           </p>
 
-          <Screenshot src="/images/Noiseless_app_sss.png" alt="Noiseless Desktop Shortcut" />
         </Step>
 
         <Step num="02">
           <h3 className="step-title">Calibrate Your Voice (once)</h3>
           <p className="step-desc">
-            Noiseless needs to learn your voice to separate it from background noise. This takes 7
-            seconds and is saved for your microphone, so you only do it once. If you skip it, the
-            first meeting prompt offers <strong>Calibrate &amp; start</strong> instead.
+            Noiseless learns your voice and your room so it can tell them apart. It takes 8 seconds
+            and is saved for your microphone, so you only do it once. If you skip it, the first
+            meeting card offers <strong>Calibrate &amp; turn on</strong> instead.
           </p>
+
+          <Screenshot src="/images/app-setup.png" alt="Noiseless window before calibration" />
+
           <ul className="step-list">
-            <li>Open Noiseless from your desktop</li>
             <li>
-              Select your <strong>headphone microphone</strong> from the dropdown (not the webcam mic)
+              Under <strong>Microphone</strong>, pick your <strong>headset microphone</strong> (not the
+              webcam mic). Noiseless starts with your Windows default mic
+            </li>
+            <li>Click <strong>Calibrate my mic · 8 sec</strong></li>
+            <li>
+              <strong>Step 1:</strong> stay quiet for 3 seconds while it listens to your room
             </li>
             <li>
-              Adjust the <strong>Noise Cancellation slider</strong> to <strong>95%</strong>
+              <strong>Step 2:</strong> speak normally for 4 seconds; it shows a sentence you can read
+              aloud
             </li>
-            <li>Click <strong>CALIBRATE</strong></li>
-            <li>When prompted, <strong>stay silent</strong> for 3 seconds</li>
             <li>
-              When prompted, <strong>speak normally</strong> for 4 seconds (say: "Hello, testing the
-              noise cancellation")
+              You'll see <strong>You're all set</strong> and how clearly your voice stands out (e.g.
+              19 dB, excellent)
             </li>
-            <li>Wait for the "Calibrated" confirmation</li>
           </ul>
 
-          <Screenshot
-            src="/images/Calibrate_SS.png"
-            alt="Noiseless Dashboard - Calibration Screen"
-          />
+          <Screenshot src="/images/app-calibrate.png" alt="Noiseless calibration, step 2: speak normally" />
 
           <div className="info-box">
             <span className="ib-icon">💡</span>
             <p>
-              <strong>Pro tip:</strong> Calibrate in the environment where you'll be taking calls. If
-              colleagues are talking, let them talk — this helps Noiseless learn the exact noise
-              pattern to remove.
+              <strong>Pro tip:</strong> Calibrate where you usually take calls. If colleagues are
+              talking, let them talk — Noiseless learns that background too. Leave{' '}
+              <strong>Strength</strong> at 95% (Maximum) for busy offices.
             </p>
           </div>
         </Step>
@@ -120,36 +121,35 @@ export default function SetupSteps() {
             Discord, or a Google Meet / Teams / Zoom call in Chrome or Edge starts using your
             microphone, a card appears in the bottom-right corner:
           </p>
+
+          <Screenshot src="/images/meeting-card.png" alt="Noiseless meeting card: Zoom is using your mic" />
+
           <ul className="step-list">
             <li>
-              <strong>"Meeting detected — Zoom. Turn on noise cancellation?"</strong> → click{' '}
-              <strong>Start</strong> (or <strong>Not now</strong>)
+              Click <strong>Turn on</strong> (or <strong>Not now</strong>)
             </li>
             <li>
-              Tick <strong>Always start automatically for Zoom</strong> to skip the question next time
+              Tick <strong>Always turn on for Zoom</strong> to skip the question next time
             </li>
             <li>
-              While it runs, Windows' default microphone is switched to{' '}
+              While it's on, Windows' microphone is set to{' '}
               <span className="step-code">CABLE Output</span>, so the meeting gets the cleaned audio
             </li>
             <li>
-              When the meeting ends, noise cancellation stops and your normal mic comes back by itself
+              When the meeting ends, noise cancellation turns off and your normal mic comes back by itself
             </li>
             <li>
-              You can still start it by hand: click <strong>START</strong> in the app or the tray menu
+              You can also turn it on by hand with the big <strong>power button</strong> in the app, or
+              from the tray menu
             </li>
           </ul>
           <p className="step-desc step-desc-mt">
-            In the app, the <strong>input graph</strong> shows your voice and the{' '}
-            <strong>output graph</strong> the cleaned audio sent to the meeting:{' '}
-            <strong>● VOICE DETECTED</strong> when you speak, <strong>● MUTED</strong> when you're
-            silent.
+            In the app, <strong>Live audio</strong> shows your microphone next to what others hear,
+            how much background is being removed, and <strong>Speaking</strong> /{' '}
+            <strong>Muted</strong> as you talk and pause.
           </p>
 
-          <Screenshot
-            src="/images/Start_Noise_Cancellation.png"
-            alt="Noiseless Dashboard - Active with Graphs"
-          />
+          <Screenshot src="/images/app-running.png" alt="Noiseless with noise cancellation on during a Zoom call" />
         </Step>
 
         <Step num="04">
@@ -214,7 +214,7 @@ export default function SetupSteps() {
           <ul className="step-list">
             <li>Join your Meet / Zoom / Teams call normally</li>
             <li>
-              Click <strong>Start</strong> on the Noiseless card (or let it start automatically)
+              Click <strong>Turn on</strong> on the Noiseless card (or let it turn on automatically)
             </li>
             <li>Hang up — Noiseless stops and gives your normal mic back by itself</li>
           </ul>
