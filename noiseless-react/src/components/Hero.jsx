@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import HeroOrb from './HeroOrb.jsx'
 
 // One clean slice through "world." every few seconds: a light blade sweeps across, the word splits
 // along the blade, the halves drift apart and dissolve ("muted"), then it settles back.
@@ -55,7 +54,10 @@ export default function Hero() {
           <span aria-hidden="true">→</span>
         </a>
       </div>
-      <HeroOrb />
+      {/* the scroll-companion orb (ScrollOrb) starts here: this box sets its size and place */}
+      <div className="hero-orb" data-orb-anchor aria-hidden="true">
+        <div className="hero-orb-hint">Hover · click · scroll</div>
+      </div>
     </section>
   )
 }

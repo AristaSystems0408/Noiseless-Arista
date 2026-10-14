@@ -30,6 +30,7 @@ export default function ThreeBackground() {
       uniforms: {
         uTime: { value: 0 },
         uMouse: { value: new THREE.Vector2(0, 0) },
+        uScroll: { value: 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -41,6 +42,7 @@ export default function ThreeBackground() {
       fragmentShader: `
         uniform float uTime;
         uniform vec2  uMouse;
+        uniform float uScroll;
         varying vec2  vUv;
 
         float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -63,6 +65,7 @@ export default function ThreeBackground() {
         void main() {
           vec2 p = vUv * 3.5 + vec2(uTime * 0.014, uTime * 0.009);
           p += uMouse * 0.35;
+          p.y += uScroll * 1.6;   // the clouds drift as you move down the page
           float n  = fbm(p);
           float n2 = fbm(p + vec2(3.1, 7.3));
           float n3 = fbm(p * 1.7 + vec2(1.2, 4.5));
@@ -141,6 +144,7 @@ export default function ThreeBackground() {
           uTime: { value: 0 },
           uPixelRatio: { value: renderer.getPixelRatio() },
           uTwinkle: { value: twinkleAmount },
+          uWarp: { value: 0 },
         },
         vertexShader: `
           attribute float aSize;
@@ -148,13 +152,14 @@ export default function ThreeBackground() {
           uniform float uTime;
           uniform float uPixelRatio;
           uniform float uTwinkle;
+          uniform float uWarp;
           varying vec3 vColor;
 
           void main() {
             vColor = color;
             vec4 mv = modelViewMatrix * vec4(position, 1.0);
             float tw = 1.0 + uTwinkle * sin(uTime * 2.2 + aSeed) * 0.55;
-            gl_PointSize = aSize * tw * uPixelRatio * (260.0 / -mv.z);
+            gl_PointSize = aSize * tw * uPixelRatio * (260.0 / -mv.z) * (1.0 + uWarp * 1.4);
             gl_Position = projectionMatrix * mv;
           }
         `,
@@ -205,12 +210,22 @@ export default function ThreeBackground() {
     let mX = 0
     let mY = 0
     let scrollY = 0
+    let scrollV = 0           // px per second, decays quickly
+    let lastY = window.scrollY
+    let lastT = performance.now()
+    let warp = 0
 
     const onMouseMove = (e) => {
       targetMX = (e.clientX / window.innerWidth - 0.5) * 2
       targetMY = (e.clientY / window.innerHeight - 0.5) * 2
     }
-    const onScroll = () => { scrollY = window.scrollY }
+    const onScroll = () => {
+      const now = performance.now()
+      scrollY = window.scrollY
+      scrollV = Math.max(scrollV * 0.6, (Math.abs(scrollY - lastY) / Math.max(1, now - lastT)) * 1000)
+      lastY = scrollY
+      lastT = now
+    }
     const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight
       camera.updateProjectionMatrix()
@@ -240,6 +255,15 @@ export default function ThreeBackground() {
       camera.position.z = 220 - scrollY * 0.02
       camera.lookAt(mX * 8, -mY * 6, -200)
       camera.rotation.z = mX * 0.02
+
+      // Warp: a fast scroll kicks the field of view wider and swells the stars
+      scrollV *= 0.9
+      warp += (Math.min(1, scrollV / 3000) - warp) * 0.12
+      camera.fov = 65 + warp * 18
+      camera.updateProjectionMatrix()
+      const docH = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+      nebulaMat.uniforms.uScroll.value = scrollY / docH
+      ;[starsFar, starsMid, starsNear].forEach((st, k) => { st.userData.baseMat.uniforms.uWarp.value = warp * (0.4 + k * 0.4) })
 
       // Nebula time & mouse
       nebulaMat.uniforms.uTime.value = t

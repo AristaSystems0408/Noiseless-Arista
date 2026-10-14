@@ -1,4 +1,5 @@
 import ThreeBackground from './components/ThreeBackground.jsx'
+import ScrollOrb from './components/ScrollOrb.jsx'
 import BrandBar from './components/BrandBar.jsx'
 import Hero from './components/Hero.jsx'
 import Downloads from './components/Downloads.jsx'
@@ -13,6 +14,7 @@ function App() {
   return (
     <>
       <ThreeBackground />
+      <ScrollOrb />
       <BrandBar />
       <main>
         <Hero />
