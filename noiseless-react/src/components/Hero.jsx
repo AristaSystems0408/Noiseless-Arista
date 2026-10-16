@@ -36,11 +36,6 @@ export default function Hero() {
           How it works — the model and the math
           <span aria-hidden="true">→</span>
         </a>
-        <a href="#live" className="hero-how hero-live">
-          <span className="hero-how-dot" />
-          Try it live with your own mic
-          <span aria-hidden="true">→</span>
-        </a>
       </div>
       {/* the scroll-companion orb (ScrollOrb) starts here: this box sets its size and place */}
       <div className="hero-orb" data-orb-anchor aria-hidden="true">
