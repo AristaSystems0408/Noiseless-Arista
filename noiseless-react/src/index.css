@@ -334,26 +334,29 @@ body.orb-hover { cursor: crosshair; }
 /* the samurai's canvas: above the page, below the brand bar, only visible while a strike plays */
 .samurai-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 60; pointer-events: none; visibility: hidden; }
 
-/* the moment the sword clicks home: the word falls apart along the cut, then re-forms */
-.slice-word.split .slice-base   { animation: splitBase 2.1s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-.slice-word.split .slice-top    { animation: splitTop 2.1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-.slice-word.split .slice-bottom { animation: splitBottom 2.1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+/* the moment the sword clicks home: the word splits along the cut and both halves drop, then it re-forms.
+ * The bottom half falls at once; the top half slides a little along the cut, catches, then tips and follows. */
+.slice-word.split .slice-base   { animation: splitBase 2.6s linear forwards; }
+.slice-word.split .slice-top    { animation: dropTop 2.6s linear forwards; }
+.slice-word.split .slice-bottom { animation: dropBottom 2.6s linear forwards; }
 @keyframes splitBase {
-  0%   { opacity: 0; }
-  64%  { opacity: 0; filter: blur(8px); transform: scale(0.98); }
-  100% { opacity: 1; filter: blur(0); transform: scale(1); }
+  0%, 68% { opacity: 0; filter: blur(8px); transform: scale(0.97); }
+  100%    { opacity: 1; filter: blur(0); transform: scale(1); }
 }
-@keyframes splitTop {
-  0%   { opacity: 1; transform: translate(0, 0) rotate(0); filter: drop-shadow(0 0 10px rgba(0, 255, 208, 0.9)); }
-  26%  { opacity: 1; transform: translate(-0.06em, -0.07em) rotate(-2deg); filter: drop-shadow(0 0 4px rgba(0, 255, 208, 0.5)); }
-  56%  { opacity: 0; transform: translate(-0.12em, -0.16em) rotate(-3.4deg); filter: blur(6px); }
-  100% { opacity: 0; transform: translate(-0.12em, -0.16em) rotate(-3.4deg); }
+@keyframes dropTop {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0); filter: drop-shadow(0 0 12px rgba(0, 255, 208, 0.95)); animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1); }
+  9%   { transform: translate(0.06em, -0.035em) rotate(-1.2deg); filter: drop-shadow(0 0 6px rgba(0, 255, 208, 0.6)); }
+  20%  { opacity: 1; transform: translate(0.075em, -0.02em) rotate(-1.6deg); animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.4); }
+  44%  { opacity: 0.9; filter: drop-shadow(0 0 3px rgba(0, 255, 208, 0.3)); }
+  60%  { opacity: 0; transform: translate(0.3em, 2.5em) rotate(16deg); filter: blur(3px); }
+  100% { opacity: 0; transform: translate(0.3em, 2.5em) rotate(16deg); }
 }
-@keyframes splitBottom {
-  0%   { opacity: 1; transform: translate(0, 0) rotate(0); filter: drop-shadow(0 0 10px rgba(255, 77, 106, 0.8)); }
-  26%  { opacity: 1; transform: translate(0.06em, 0.09em) rotate(1.6deg); filter: drop-shadow(0 0 4px rgba(255, 77, 106, 0.4)); }
-  56%  { opacity: 0; transform: translate(0.12em, 0.2em) rotate(3deg); filter: blur(6px); }
-  100% { opacity: 0; transform: translate(0.12em, 0.2em) rotate(3deg); }
+@keyframes dropBottom {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0); filter: drop-shadow(0 0 12px rgba(255, 77, 106, 0.85)); animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1); }
+  6%   { transform: translate(-0.03em, 0.04em) rotate(0.8deg); animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.4); }
+  34%  { opacity: 0.9; filter: drop-shadow(0 0 3px rgba(255, 77, 106, 0.3)); }
+  50%  { opacity: 0; transform: translate(-0.2em, 2.6em) rotate(-14deg); filter: blur(3px); }
+  100% { opacity: 0; transform: translate(-0.2em, 2.6em) rotate(-14deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -15,7 +15,7 @@ import { createPortal } from 'react-dom'
  */
 
 const T = { dash0: 280, dash1: 480, swing0: 1250, swing1: 1580, chin: 1880, vanish0: 2420, vanish1: 3260, end: 4100 }
-const SPLIT_MS = 2100            // matches .slice-word.split in index.css
+const SPLIT_MS = 2600            // matches .slice-word.split in index.css
 
 const M = [10, -41]              // saya mouth
 const E = [-58, -26]             // saya end
