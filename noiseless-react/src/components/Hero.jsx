@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import ProofOfConcept from './ProofOfConcept'
 
 // One clean slice through "world." every few seconds: a light blade sweeps across, the word splits
 // along the blade, the halves drift apart and dissolve ("muted"), then it settles back.
@@ -58,6 +59,7 @@ export default function Hero() {
       <div className="hero-orb" data-orb-anchor aria-hidden="true">
         <div className="hero-orb-hint">Hover · click · scroll</div>
       </div>
+      <ProofOfConcept />
     </section>
   )
 }
