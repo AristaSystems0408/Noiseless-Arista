@@ -3,6 +3,7 @@ import ScrollOrb from './components/ScrollOrb.jsx'
 import BrandBar from './components/BrandBar.jsx'
 import Hero from './components/Hero.jsx'
 import Downloads from './components/Downloads.jsx'
+import LiveDemo from './live/LiveDemo.jsx'
 import SetupSteps from './components/SetupSteps.jsx'
 import HelpBox from './components/HelpBox.jsx'
 import Footer from './components/Footer.jsx'
@@ -18,6 +19,7 @@ function App() {
       <BrandBar />
       <main>
         <Hero />
+        <LiveDemo />
         <Downloads />
         <SetupSteps />
       </main>
