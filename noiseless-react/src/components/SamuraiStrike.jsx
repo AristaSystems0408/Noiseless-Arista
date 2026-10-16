@@ -9,19 +9,12 @@ import { createPortal } from 'react-dom'
  *   land      he lands past the word, back to it, sword out; a thin cut glows on the still-whole word
  *   sheathe   the sword swings overhead and slides slowly into the saya
  *   chin      the moment it clicks home, the word falls apart (the page's noise calms with it)
- *   skills    three seconds of showing off: a lightning re-draw, a sword spin, a backflip,
- *             three shuriken into the noise, a flick and a snap back into the saya
- *   vanish    a smoke bomb, a flash, and he breaks into a vortex of petals
+ *   vanish    a beat later: a flash, a column of light, smoke, and he breaks into a vortex of petals
  *
  * The samurai is drawn facing his direction of travel in unit space (feet at 0,0; about 100 tall).
  */
 
-const T = {
-  dash0: 280, dash1: 480, swing0: 1250, swing1: 1580, chin: 1880,
-  draw0: 1980, draw1: 2380, spin1: 3080, flip1: 3980, throw1: 4480, sheath1: 4980,
-  vanish0: 5060, vanish1: 5900, end: 6700,
-}
-const THROWS = [0.12, 0.38, 0.64]   // when the shuriken leave the hand, as a fraction of the throw
+const T = { dash0: 280, dash1: 480, swing0: 1250, swing1: 1580, chin: 1880, vanish0: 2420, vanish1: 3260, end: 4100 }
 const SPLIT_MS = 2100            // matches .slice-word.split in index.css
 
 const M = [10, -41]              // saya mouth
@@ -34,9 +27,6 @@ const H1 = [M[0] - D[0] * 55, M[1] - D[1] * 55]   // blade lined up with the say
 const HS = [M[0] - D[0] * 9, M[1] - D[1] * 9]     // sheathed: only the hilt shows
 const BLADE = 74
 const SHOULDER = [-4, -61]
-const HD = [34, -84]             // the re-draw finishes high and forward
-const AU = -1.05                 // blade pointing up and forward
-const HP = [26, -56]             // hand in front of the chest for the spin
 
 const clamp01 = (x) => Math.min(1, Math.max(0, x))
 const lerp = (a, b, t) => a + (b - a) * t
@@ -167,8 +157,6 @@ function samurai(g, s, time, pose, opts = {}) {
   g.shadowBlur = 0
   blade(); g.strokeStyle = '#effffc'; g.lineWidth = 1.5; g.stroke()
   g.restore()
-  const m = g.getTransform()
-  return { hand: m.transformPoint(new DOMPoint(hx, hy)), tip: m.transformPoint(new DOMPoint(b1x, b1y)) }
 }
 
 export default function SamuraiStrike({ wordRef }) {
@@ -185,8 +173,7 @@ export default function SamuraiStrike({ wordRef }) {
     let raf = 0, timer = 0, running = false, start = 0
     let geo = null
     let sparks = [], petals = [], dust = [], ink = []
-    let trail = [], stars = [], puffs = [], swirl = []
-    let fired = 0, flipLanded = false, vanished = false
+    let puffs = [], swirl = [], vanished = false
     let slashP = 0, chinDone = false, shook = false, landed = false
 
     const size = () => {
@@ -244,50 +231,7 @@ export default function SamuraiStrike({ wordRef }) {
         const e = inOut(clamp01((ms - T.swing1) / (T.chin - T.swing1)))
         return { hand: [lerp(H1[0], HS[0], e * e), lerp(H1[1], HS[1], e * e)], ang: AD, clip: true, glow: 1 - e * 0.6 }
       }
-      const sheathed = { hand: HS, ang: AD, clip: true, glow: 0.4 }
-      if (ms < T.draw0) return sheathed
-      if (ms < T.draw1) {
-        // lightning re-draw: the blade rips out of the saya in one rising arc
-        const e = outCubic((ms - T.draw0) / (T.draw1 - T.draw0))
-        return { hand: [bez(HS[0], 46, HD[0], e), bez(HS[1], -36, HD[1], e)], ang: lerp(AD, AU, e), clip: e < 0.08, trail: true }
-      }
-      if (ms < T.spin1) {
-        // three fast turns of the sword in front of him
-        const k = (ms - T.draw1) / (T.spin1 - T.draw1)
-        const h = outCubic(clamp01(k / 0.2))
-        return { hand: [lerp(HD[0], HP[0], h), lerp(HD[1], HP[1], h)], ang: AU - inOut(k) * Math.PI * 6, trail: true, disc: true }
-      }
-      if (ms < T.flip1) {
-        // a backflip, the blade drawing a spiral
-        const k = (ms - T.spin1) / (T.flip1 - T.spin1)
-        const crouch = k < 0.14 ? Math.sin((Math.PI * k) / 0.14) : 0
-        const air = clamp01((k - 0.1) / 0.8)
-        return {
-          hand: [lerp(HP[0], 18, air), lerp(HP[1], -72, Math.sin(Math.PI * air))], ang: AU - Math.PI * 6 - air * 1.6, trail: air > 0 && air < 1,
-          body: { jump: Math.sin(Math.PI * air) * 62 - crouch * 7, rot: -Math.PI * 2 * inOut(air), sq: 1 - 0.14 * Math.sin(Math.PI * air) - crouch * 0.08 },
-        }
-      }
-      if (ms < T.throw1) {
-        // three shuriken: the hand snaps forward for each one
-        const k = (ms - T.flip1) / (T.throw1 - T.flip1)
-        let snap = 0
-        for (const t0 of THROWS) snap = Math.max(snap, Math.max(0, 1 - Math.abs(k - t0) / 0.1))
-        return { hand: [24 + snap * 26, -64 + snap * 4], ang: 2.55 - snap * 0.3, throwing: true }
-      }
-      if (ms < T.sheath1) {
-        // chiburi, a sharp flick, then the snap back into the saya
-        const k = (ms - T.throw1) / (T.sheath1 - T.throw1)
-        if (k < 0.4) {
-          const e = outCubic(k / 0.4)
-          return { hand: [lerp(50, 34, e), lerp(-60, -58, e)], ang: lerp(2.25, 0.35 + Math.PI * 2, e), trail: true }
-        }
-        const e = inOut((k - 0.4) / 0.6)
-        const hand = e < 0.55
-          ? [lerp(34, H1[0], e / 0.55), lerp(-58, H1[1], e / 0.55)]
-          : [lerp(H1[0], HS[0], (e - 0.55) / 0.45), lerp(H1[1], HS[1], (e - 0.55) / 0.45)]
-        return { hand, ang: lerp(0.35 + Math.PI * 2, AD + Math.PI * 2, clamp01(e / 0.5)), clip: e > 0.5 }
-      }
-      return sheathed
+      return { hand: HS, ang: AD, clip: true, glow: 0.4 }
     }
 
     const finish = () => {
@@ -367,14 +311,8 @@ export default function SamuraiStrike({ wordRef }) {
           g.save()
           g.translate(lx + dir * settle * 6 * s, ly)
           g.scale(dir * s * (1 + settle * 0.08 - vk * 0.5), s * (1 - settle * 0.06 + vk * 0.25))
-          if (pose.body) {
-            g.translate(0, -45 - pose.body.jump)
-            g.rotate(pose.body.rot)
-            g.scale(1, pose.body.sq)
-            g.translate(0, 45)
-          }
           g.globalAlpha = 1 - vk
-          const pts = samurai(g, s, time, pose)
+          samurai(g, s, time, pose)
           if (vk > 0) {
             // the flash: for an instant he is pure light
             g.globalCompositeOperation = 'lighter'
@@ -382,26 +320,6 @@ export default function SamuraiStrike({ wordRef }) {
             samurai(g, s, time, pose, { ghost: true })
           }
           g.restore()
-          const hand = [pts.hand.x / dpr, pts.hand.y / dpr], tip = [pts.tip.x / dpr, pts.tip.y / dpr]
-          if (pose.trail) trail.push({ hand, tip, ms, disc: !!pose.disc })
-
-          // shuriken leave the hand
-          if (pose.throwing) {
-            const k = (ms - T.flip1) / (T.throw1 - T.flip1)
-            while (fired < THROWS.length && k >= THROWS[fired]) {
-              stars.push({ x: hand[0], y: hand[1], vx: dir * (1100 + fired * 160), vy: -160 + fired * 120, born: ms, life: 430 + fired * 40, rot: 0, sz: (11 * s) / 2 })
-              fired++
-            }
-          }
-          // landing the flip
-          if (!flipLanded && ms >= T.flip1) {
-            flipLanded = true
-            shake(fs * 0.025, 140)
-            for (let i = 0; i < 18; i++) {
-              const side = i % 2 ? 1 : -1
-              dust.push({ x: lx + side * 12 * s, y: ly, vx: side * (60 + Math.random() * 160), vy: -Math.random() * 50, born: ms, life: 500 + Math.random() * 300, sz: (2 + Math.random() * 3) * s })
-            }
-          }
         }
 
         // ── the vanish: smoke bomb, flash, a vortex of petals ──
@@ -502,78 +420,6 @@ export default function SamuraiStrike({ wordRef }) {
         g.restore()
       }
 
-      // ── blade trail: a ribbon of light behind the tip; during the spin a solid disc ──
-      trail = trail.filter((p) => ms - p.ms < (p.disc ? 200 : 170))
-      if (trail.length > 1) {
-        g.save()
-        g.globalCompositeOperation = 'lighter'
-        g.shadowColor = '#00ffd0'
-        g.shadowBlur = 14
-        g.lineCap = 'round'
-        for (let i = 1; i < trail.length; i++) {
-          const p0 = trail[i - 1], p1 = trail[i]
-          if (p1.ms - p0.ms > 60) continue
-          const k = 1 - (ms - p1.ms) / (p1.disc ? 200 : 170)
-          g.strokeStyle = `rgba(${Math.round(lerp(0, 235, k))},255,${Math.round(lerp(208, 250, k))},${0.9 * k})`
-          g.lineWidth = 0.8 + 3.2 * k
-          if (p1.disc) {
-            // the tip sweeps a true arc around the hand, so the disc stays round however fast it spins
-            const [hx, hy] = p1.hand
-            const a0 = Math.atan2(p0.tip[1] - hy, p0.tip[0] - hx), a1 = Math.atan2(p1.tip[1] - hy, p1.tip[0] - hx)
-            let da = a1 - a0
-            while (da > Math.PI) da -= Math.PI * 2
-            while (da < -Math.PI) da += Math.PI * 2
-            const R = Math.hypot(p1.tip[0] - hx, p1.tip[1] - hy)
-            g.fillStyle = `rgba(0,255,208,${0.15 * k})`
-            g.beginPath(); g.moveTo(hx, hy); g.arc(hx, hy, R, a0, a0 + da, da < 0); g.closePath(); g.fill()
-            g.beginPath(); g.arc(hx, hy, R, a0, a0 + da, da < 0); g.stroke()
-          } else {
-            g.beginPath(); g.moveTo(p0.tip[0], p0.tip[1]); g.lineTo(p1.tip[0], p1.tip[1]); g.stroke()
-          }
-        }
-        g.restore()
-      }
-
-      // ── shuriken: spinning stars that burst into sparks ──
-      stars = stars.filter((p) => {
-        if (ms - p.born < p.life) return true
-        for (let i = 0; i < 16; i++) {
-          const a = Math.random() * Math.PI * 2, sp = 80 + Math.random() * 260
-          sparks.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, born: ms, life: 250 + Math.random() * 300, c: Math.random() < 0.4 ? PINK : '#ffffff' })
-        }
-        return false
-      })
-      for (const p of stars) {
-        const ox = p.x, oy = p.y
-        p.x += p.vx / 60; p.y += p.vy / 60; p.vy += 140 / 60; p.rot += 0.9
-        g.save()
-        g.globalCompositeOperation = 'lighter'
-        g.strokeStyle = 'rgba(160,255,240,0.45)'; g.lineWidth = 1.2
-        g.beginPath(); g.moveTo(ox - p.vx * 0.05, oy - p.vy * 0.05); g.lineTo(p.x, p.y); g.stroke()
-        g.translate(p.x, p.y); g.rotate(p.rot)
-        g.fillStyle = '#e8fffb'; g.shadowColor = '#00ffd0'; g.shadowBlur = 10
-        g.beginPath()
-        for (let i = 0; i < 8; i++) {
-          const rr = i % 2 ? p.sz * 0.32 : p.sz, a = (i / 8) * Math.PI * 2
-          if (i) g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr)
-          else g.moveTo(rr, 0)
-        }
-        g.closePath(); g.fill()
-        g.restore()
-      }
-
-      // ── the snap back into the saya: a second, smaller chin ──
-      if (ms >= T.sheath1 && ms < T.sheath1 + 420) {
-        const k = (ms - T.sheath1) / 420
-        const [mx, my] = toWorld(M)
-        g.save()
-        g.globalCompositeOperation = 'lighter'
-        g.strokeStyle = `rgba(160,255,240,${0.7 * (1 - k)})`
-        g.lineWidth = 1.6 * (1 - k) + 0.4
-        g.beginPath(); g.arc(mx, my, 3 + outCubic(k) * 22 * s, 0, Math.PI * 2); g.stroke()
-        g.restore()
-      }
-
       // ── vanish: smoke, a ground shockwave, petals spiralling out ──
       if (ms >= T.vanish0) {
         const k = (ms - T.vanish0) / (T.vanish1 - T.vanish0)
@@ -666,8 +512,7 @@ export default function SamuraiStrike({ wordRef }) {
       running = true
       slashP = 0; chinDone = false; shook = false; landed = false
       sparks = []; dust = []; ink = []
-      trail = []; stars = []; puffs = []; swirl = []
-      fired = 0; flipLanded = false; vanished = false
+      puffs = []; swirl = []; vanished = false
       geo = layout()
       petals = Array.from({ length: 18 }, () => {
         const y = geo.r.top - geo.fs * 0.8 + Math.random() * geo.fs * 2.6
