@@ -2,13 +2,17 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
 /*
- * The noise orb as a scroll companion (one fixed, full-screen canvas between the background and the content).
+ * The scroll journey: one field of particles that tells the Noiseless story as you scroll.
  *
- *  • Where it is: it starts in the hero's orb slot, grows into a big ghosted glow behind the downloads,
- *    rides the right edge through the setup guide, and settles, calm, above the footer.
- *  • How noisy it is: each section has a base level (noisy hero → silent footer); scrolling fast stirs
- *    the noise up, stopping lets Noiseless calm it. The headline's slice, hovering and clicking calm it too.
- *  • Touch: the surface dents where the pointer meets it; a click sends a shockwave ripple outward.
+ *   01 Noise    the hero: a turbulent storm of noise
+ *   02 Signal   the proof: it unwinds into a jagged, noisy sound wave
+ *   03 Model    the downloads: it assembles into the neural network, signals racing through its layers
+ *   04 Voice    the setup guide: only a clean voice is left, a calm helix
+ *   05 Silence  the footer: everything settles into one quiet ring
+ *
+ * Every particle has a place in each shape; scrolling morphs between them (staggered, swirling in flight).
+ * Scrolling fast stirs the field and smears it into trails, the pointer pushes particles aside, a click
+ * sends a shockwave through it, and the headline's slice calms the storm.
  */
 
 // Ashima Arts / Stefan Gustavson 3D simplex noise (MIT)
@@ -35,7 +39,8 @@ float snoise(vec3 v){
   p0*=norm.x; p1*=norm.y; p2*=norm.z; p3*=norm.w;
   vec4 m=max(0.6-vec4(dot(x0,x0),dot(x1,x1),dot(x2,x2),dot(x3,x3)),0.0); m=m*m;
   return 42.0*dot(m*m,vec4(dot(p0,x0),dot(p1,x1),dot(p2,x2),dot(p3,x3)));
-}`
+}
+vec3 snoise3(vec3 p){ return vec3(snoise(p), snoise(p + vec3(31.4, 17.0, -9.2)), snoise(p + vec3(-23.1, 47.7, 11.9))); }`
 
 // additive light that never writes alpha (a transparent canvas would otherwise darken what's behind it)
 const ADD_LIGHT = {
@@ -49,27 +54,118 @@ const ADD_LIGHT = {
 
 const FOV = 40
 const CAM_Z = 7
-const ORB_SPAN = 4.6          // world size of orb + rings, used to map "diameter in px" to scale
+const CHAPTERS = ['Noise', 'Signal', 'Model', 'Voice', 'Silence']
+
+// per chapter: how noisy, how pink, how bright
+const NOISE = [1, 0.32, 0.12, 0.03, 0]
+const PINK = [0.85, 0.7, 0.12, 0, 0]
+const FADE = [1, 0.9, 0.8, 0.9, 1]
+const FADE_NARROW = [1, 0.8, 0.55, 0.45, 0.9]   // on phones the shapes sit behind the text
+const GLOW = [0.9, 0.35, 0.45, 0.4, 0.8]
+
+const lerp = (a, b, t) => a + (b - a) * t
+const smooth = (e0, e1, x) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t) }
+const at = (arr, s) => { const i = Math.min(arr.length - 2, Math.floor(s)); return lerp(arr[i], arr[i + 1], s - i) }
+
+// ── The five shapes (unit scale: about -1..1, the wave and network wider) ──
+function buildShapes(N) {
+  const R = Math.random
+  const S = Array.from({ length: 5 }, () => new Float32Array(N * 3))
+  const dir = () => { const u = R() * 2 - 1, th = R() * Math.PI * 2, s = Math.sqrt(1 - u * u); return [s * Math.cos(th), u, s * Math.sin(th)] }
+  const put = (k, i, x, y, z) => { S[k][i * 3] = x; S[k][i * 3 + 1] = y; S[k][i * 3 + 2] = z }
+
+  const RINGS = [
+    { r: 1.42, e: new THREE.Euler(1.15, 0.2, 0.1), ph: 0.3 },
+    { r: 1.62, e: new THREE.Euler(1.35, -0.55, 0.4), ph: 2.1 },
+    { r: 1.82, e: new THREE.Euler(0.9, 0.7, -0.3), ph: 4.4 },
+  ]
+
+  // the network: five layers, like the GRU stack
+  const LAYERS = [5, 8, 11, 8, 4]
+  const nodes = LAYERS.map((n, l) => Array.from({ length: n }, (_, j) => [
+    -1.7 + (l / (LAYERS.length - 1)) * 3.4,
+    n === 1 ? 0 : -0.9 + (j / (n - 1)) * 1.8,
+    Math.sin(j * 1.7 + l) * 0.18,
+  ]))
+  const edges = []
+  for (let l = 0; l < LAYERS.length - 1; l++) {
+    for (const a of nodes[l]) {
+      const near = [...nodes[l + 1]].sort((p, q) => Math.abs(p[1] - a[1]) - Math.abs(q[1] - a[1])).slice(0, 3)
+      for (const b of near) edges.push([a, b])
+    }
+    for (const b of nodes[l + 1]) {   // and every node has at least one input
+      if (!edges.some((e) => e[1] === b)) edges.push([nodes[l].reduce((m, a) => (Math.abs(a[1] - b[1]) < Math.abs(m[1] - b[1]) ? a : m)), b])
+    }
+  }
+
+  for (let i = 0; i < N; i++) {
+    // 01 storm: a ragged shell plus flying debris
+    {
+      const q = R()
+      if (q < 0.62) { const d = dir(), r = 1 + (R() - 0.5) * 0.1; put(0, i, d[0] * r, d[1] * r, d[2] * r) }
+      else if (q < 0.86) {
+        const ring = RINGS[i % 3], a = R() * Math.PI * 2
+        const jag = Math.sin(a * 9 + ring.ph) * 0.05 + Math.sin(a * 23 + ring.ph * 2) * 0.035 + (R() - 0.5) * 0.04
+        const v = new THREE.Vector3(Math.cos(a) * (ring.r + jag), Math.sin(a) * (ring.r + jag), (R() - 0.5) * 0.03).applyEuler(ring.e)
+        put(0, i, v.x, v.y, v.z)
+      } else { const d = dir(), r = 1.15 + R() * R() * 1.3; put(0, i, d[0] * r, d[1] * r, d[2] * r) }
+    }
+
+    // 02 noisy sound wave: seven jagged strands
+    {
+      const st = i % 7, u = R() * 2 - 1, x = u * 2.4
+      const env = 0.3 + 0.7 * (1 - Math.abs(u) ** 3)
+      let y = 0.42 * Math.sin(u * 7 + st) + 0.22 * Math.sin(u * 23 + st * 2.1) + 0.13 * Math.sin(u * 61 + st * 0.7)
+      y = (y + (R() - 0.5) * 0.05) * env * 0.75
+      if (R() < 0.05) y += (R() - 0.5) * 0.8 * env
+      put(1, i, x, y, (st - 3) * 0.07 + (R() - 0.5) * 0.06)
+    }
+
+    // 03 network: nodes and the connections between neighbouring layers
+    if (R() < 0.36) {
+      const l = Math.floor(R() * LAYERS.length), n = nodes[l][Math.floor(R() * LAYERS[l])], d = dir(), r = 0.05 * Math.cbrt(R())
+      put(2, i, n[0] + d[0] * r, n[1] + d[1] * r, n[2] + d[2] * r)
+    } else {
+      const [a, b] = edges[Math.floor(R() * edges.length)], t = R()
+      put(2, i, lerp(a[0], b[0], t), lerp(a[1], b[1], t) + (R() - 0.5) * 0.006, lerp(a[2], b[2], t))
+    }
+
+    // 04 clean voice: a smooth double helix with rungs
+    {
+      const t = R() * 2 - 1, y = t * 1.5, rr = 0.34 * (0.65 + 0.35 * Math.cos(t * Math.PI * 0.5))
+      if (R() < 0.16) {
+        const tq = Math.round(t * 14) / 14, ang = tq * Math.PI * 4, s = R() * 2 - 1
+        put(3, i, Math.cos(ang) * rr * s, tq * 1.5, Math.sin(ang) * rr * s)
+      } else {
+        const ang = t * Math.PI * 4 + (i % 2) * Math.PI, j = (R() - 0.5) * 0.025
+        put(3, i, Math.cos(ang) * (rr + j), y + j, Math.sin(ang) * (rr + j))
+      }
+    }
+
+    // 05 silence: one thin ring and a little dust
+    if (R() < 0.88) { const a = R() * Math.PI * 2, r = 1 + (R() - 0.5) * 0.03; put(4, i, Math.cos(a) * r, Math.sin(a) * r, (R() - 0.5) * 0.04) }
+    else { const a = R() * Math.PI * 2, r = 0.3 + R() * 1.1; put(4, i, Math.cos(a) * r, Math.sin(a) * r, (R() - 0.5) * 0.4) }
+  }
+  return S
+}
 
 function glowTexture() {
   const c = document.createElement('canvas')
   c.width = c.height = 256
   const g = c.getContext('2d')
   const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128)
-  grd.addColorStop(0, 'rgba(0,255,208,0.55)')
-  grd.addColorStop(0.35, 'rgba(0,212,170,0.22)')
-  grd.addColorStop(0.68, 'rgba(77,171,255,0.05)')
-  grd.addColorStop(0.92, 'rgba(0,0,0,0)')
+  grd.addColorStop(0, 'rgba(0,255,208,0.42)')
+  grd.addColorStop(0.35, 'rgba(0,212,170,0.16)')
+  grd.addColorStop(0.7, 'rgba(77,171,255,0.04)')
+  grd.addColorStop(0.95, 'rgba(0,0,0,0)')
   g.fillStyle = grd
   g.fillRect(0, 0, 256, 256)
   return new THREE.CanvasTexture(c)
 }
 
-const lerp = (a, b, t) => a + (b - a) * t
-const ease = (t) => t * t * (3 - 2 * t)
-
 export default function ScrollOrb() {
   const canvasRef = useRef(null)
+  const railRef = useRef(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -79,9 +175,9 @@ export default function ScrollOrb() {
 
     let renderer
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' })
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: 'high-performance' })
     } catch {
-      return undefined // no WebGL: the page still works without the orb
+      return undefined // no WebGL: the page still works without it
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, coarse ? 1.5 : 2))
     renderer.setClearColor(0x000000, 0)
@@ -89,339 +185,320 @@ export default function ScrollOrb() {
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100)
     camera.position.set(0, 0, CAM_Z)
-
     const holder = new THREE.Group()   // placed and scaled by scroll
-    const group = new THREE.Group()    // spun by time / pointer
+    const group = new THREE.Group()    // tilted by the pointer
     holder.add(group)
     scene.add(holder)
 
-    // ── Orb ──
-    const uniforms = {
-      uTime: { value: 0 },
-      uChaos: { value: 1 },
-      uPulse: { value: 1 },
-      uPointerDir: { value: new THREE.Vector3(0, 0, 1) },
-      uPointerAmt: { value: 0 },
-      uFade: { value: 1 },
-    }
-    const orbMat = new THREE.ShaderMaterial({
-      uniforms,
-      transparent: true,
-      vertexShader: /* glsl */ `
-        uniform float uTime; uniform float uChaos; uniform float uPulse;
-        uniform vec3 uPointerDir; uniform float uPointerAmt;
-        varying vec3 vPos; varying float vDisp; varying vec3 vObj; varying vec3 vNrm;
-        ${SIMPLEX}
-        void main() {
-          vec3 p = position;
-          float n1 = snoise(p * 1.4 + vec3(0.0, uTime * 0.32, 0.0));
-          float n2 = snoise(p * 3.6 + vec3(uTime * 0.85, 0.0, uTime * 0.55));
-          float n3 = snoise(p * 8.0 + vec3(0.0, uTime * 1.9, 0.0));
-          float noisy = n1 * 0.55 + n2 * 0.32 + n3 * 0.13;
-          float clean = sin(p.y * 5.0 - uTime * 1.4) * 0.5 + 0.5;
-          float d = mix(clean * 0.05, noisy * 0.36, uChaos);
-          // the Noiseless pulse: a bright shell sweeping up the surface
-          d += exp(-pow((p.y + 1.2 - uPulse * 2.6) * 3.2, 2.0)) * (1.0 - uPulse) * 0.10;
-          // the pointer presses the surface in, with a soft raised rim around the dent
-          float pd = dot(normalize(p), uPointerDir);
-          d += (-smoothstep(0.82, 1.0, pd) * 0.26 + smoothstep(0.6, 0.82, pd) * (1.0 - smoothstep(0.82, 0.95, pd)) * 0.07) * uPointerAmt;
-          vDisp = d; vObj = p; vNrm = normalize(normalMatrix * normal);
-          vec4 mv = modelViewMatrix * vec4(p + normal * d, 1.0);
-          vPos = mv.xyz;
-          gl_Position = projectionMatrix * mv;
-        }`,
-      fragmentShader: /* glsl */ `
-        uniform float uChaos; uniform float uFade; uniform float uPointerAmt; uniform vec3 uPointerDir;
-        varying vec3 vPos; varying float vDisp; varying vec3 vObj; varying vec3 vNrm;
-        void main() {
-          vec3 Nd = normalize(cross(dFdx(vPos), dFdy(vPos)));
-          vec3 N = normalize(mix(normalize(vNrm), Nd, clamp(uChaos * 1.2, 0.15, 1.0)));
-          vec3 V = normalize(-vPos);
-          float fres = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.4);
-          vec3 teal = vec3(0.0, 0.83, 0.67), mint = vec3(0.0, 1.0, 0.82), blue = vec3(0.30, 0.67, 1.0);
-          vec3 pink = vec3(1.0, 0.36, 0.52), deep = vec3(0.012, 0.03, 0.06);
-          vec3 rim = mix(mix(teal, blue, 0.5 + 0.5 * vObj.y), pink, smoothstep(0.06, 0.32, vDisp) * uChaos);
-          vec3 L = normalize(vec3(0.5, 0.9, 0.6));
-          float diff = max(dot(N, L), 0.0);
-          float spec = pow(max(dot(reflect(-L, N), V), 0.0), 36.0) * (0.35 + 0.65 * uChaos);
-          vec3 col = deep + rim * (0.16 + diff * 0.22) + rim * fres * 1.55 + vec3(spec) * 0.85;
-          float bands = smoothstep(0.92, 1.0, sin(vObj.y * 46.0 + vDisp * 30.0) * 0.5 + 0.5) * (0.25 + 0.5 * (1.0 - uChaos));
-          col += mint * bands * 0.35;
-          // where the pointer touches, the surface glows
-          col += mint * smoothstep(0.86, 1.0, dot(normalize(vObj), uPointerDir)) * uPointerAmt * 0.5;
-          gl_FragColor = vec4(col, uFade);
-        }`,
-    })
-    const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(1, coarse ? 40 : 56), orbMat)
-    group.add(orb)
-
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), transparent: true, depthWrite: false, ...ADD_LIGHT }))
-    glow.scale.set(4.9, 4.9, 1)
-    glow.position.z = -0.6
+    glow.scale.set(5, 5, 1)
+    glow.position.z = -0.8
     holder.add(glow)
 
-    // ── Waveform rings ──
-    const RING_POINTS = 640
-    const rings = [
-      { r: 1.62, tilt: [1.15, 0.2, 0.1], k: 9, color: 0x00ffd0, speed: 0.6 },
-      { r: 1.86, tilt: [1.35, -0.55, 0.4], k: 6, color: 0x4dabff, speed: -0.45 },
-      { r: 2.1, tilt: [0.9, 0.7, -0.3], k: 12, color: 0x00d4aa, speed: 0.35 },
-    ].map((cfg) => {
-      const geo = new THREE.BufferGeometry()
-      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(RING_POINTS * 3), 3))
-      const line = new THREE.LineLoop(geo, new THREE.LineBasicMaterial({ color: cfg.color, transparent: true, opacity: 0.75, depthWrite: false, ...ADD_LIGHT }))
-      line.rotation.set(...cfg.tilt)
-      group.add(line)
-      return { ...cfg, line, geo, phases: Array.from({ length: 7 }, () => Math.random() * Math.PI * 2) }
-    })
+    // ── Particles ──
+    const N = coarse ? 7000 : reduced ? 9000 : 16000
+    const shapes = buildShapes(N)
+    const seeds = new Float32Array(N * 4)
+    for (let i = 0; i < N * 4; i++) seeds[i] = Math.random()
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(shapes[0], 3))
+    geo.setAttribute('aS1', new THREE.BufferAttribute(shapes[1], 3))
+    geo.setAttribute('aS2', new THREE.BufferAttribute(shapes[2], 3))
+    geo.setAttribute('aS3', new THREE.BufferAttribute(shapes[3], 3))
+    geo.setAttribute('aS4', new THREE.BufferAttribute(shapes[4], 3))
+    geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 4))
+    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 10)
 
-    // ── Shockwave ripples (click) ──
-    const ripples = Array.from({ length: 4 }, () => {
-      const geo = new THREE.BufferGeometry()
-      const pts = new Float32Array(160 * 3)
-      for (let i = 0; i < 160; i++) { const a = (i / 160) * Math.PI * 2; pts[i * 3] = Math.cos(a); pts[i * 3 + 1] = Math.sin(a) }
-      geo.setAttribute('position', new THREE.BufferAttribute(pts, 3))
-      const line = new THREE.LineLoop(geo, new THREE.LineBasicMaterial({ color: 0x00ffd0, transparent: true, opacity: 0, depthWrite: false, ...ADD_LIGHT }))
-      line.visible = false
-      holder.add(line)
-      return { line, start: -10 }
-    })
-    let rippleIdx = 0
-
-    // ── Noise particles ──
-    const P = reduced || coarse ? 600 : 1400
-    const pGeo = new THREE.BufferGeometry()
-    const pPos = new Float32Array(P * 3)
-    const pSeed = new Float32Array(P)
-    for (let i = 0; i < P; i++) {
-      const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, rad = 1.5 + Math.random() * 1.6, s = Math.sqrt(1 - u * u)
-      pPos[i * 3] = rad * s * Math.cos(th); pPos[i * 3 + 1] = rad * u; pPos[i * 3 + 2] = rad * s * Math.sin(th)
-      pSeed[i] = Math.random() * 10
+    const U = {
+      uTime: { value: 0 }, uStage: { value: 0 }, uNoise: { value: 1 }, uPink: { value: 0.85 },
+      uStir: { value: 0 }, uDir: { value: 1 }, uFade: { value: 1 }, uFlight: { value: reduced ? 0.25 : 1 },
+      uPointer: { value: new THREE.Vector3(99, 99, 0) }, uPointerAmt: { value: 0 },
+      uShockO: { value: new THREE.Vector3() }, uShockT: { value: -10 },
+      uPixel: { value: renderer.getPixelRatio() }, uSize: { value: 1 },
     }
-    pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3))
-    pGeo.setAttribute('aSeed', new THREE.BufferAttribute(pSeed, 1))
-    const pMat = new THREE.ShaderMaterial({
-      uniforms: { uTime: uniforms.uTime, uChaos: uniforms.uChaos, uFade: uniforms.uFade, uPixel: { value: renderer.getPixelRatio() }, uScale: { value: 1 } },
+    const mat = new THREE.ShaderMaterial({
+      uniforms: U,
+      transparent: true,
+      depthWrite: false,
+      ...ADD_LIGHT,
       vertexShader: /* glsl */ `
-        attribute float aSeed; uniform float uTime; uniform float uChaos; uniform float uPixel; uniform float uScale;
-        varying float vA; varying float vC;
+        attribute vec3 aS1; attribute vec3 aS2; attribute vec3 aS3; attribute vec3 aS4; attribute vec4 aSeed;
+        uniform float uTime, uStage, uNoise, uPink, uStir, uDir, uFade, uFlight, uPointerAmt, uShockT, uPixel, uSize;
+        uniform vec3 uPointer, uShockO;
+        varying vec3 vCol; varying float vA;
+        ${SIMPLEX}
+        vec3 shapeAt(float k) {
+          if (k < 0.5) return position;
+          if (k < 1.5) return aS1;
+          if (k < 2.5) return aS2;
+          if (k < 3.5) return aS3;
+          return aS4;
+        }
+        vec2 rot(vec2 v, float a) { float c = cos(a), s = sin(a); return vec2(c * v.x - s * v.y, s * v.x + c * v.y); }
         void main() {
-          vec3 p = position;
-          float jitter = sin(uTime * 3.0 + aSeed * 7.0) * 0.08 * uChaos;
-          p *= 1.0 + jitter + (1.0 - uChaos) * 0.12;
+          float t = uTime;
+          float s = clamp(uStage, 0.0, 4.0);
+          float k = floor(min(s, 3.999));
+          float f = s - k;
+          // staggered morph: each particle leaves a little later than the one before
+          float lf = smoothstep(0.0, 1.0, clamp((f - aSeed.x * 0.42) / 0.58, 0.0, 1.0));
+          vec3 A = shapeAt(k), B = shapeAt(k + 1.0);
+
+          // each shape's own motion
+          float wStorm = clamp(1.0 - s, 0.0, 1.0);
+          float wWave = clamp(1.0 - abs(s - 1.0), 0.0, 1.0);
+          float wNet = clamp(1.0 - abs(s - 2.0), 0.0, 1.0);
+          float wHelix = clamp(1.0 - abs(s - 3.0), 0.0, 1.0);
+          float wRing = clamp(s - 3.0, 0.0, 1.0);
+          vec3 p = mix(A, B, lf);
+          p.xz = rot(p.xz, t * 0.22 * wStorm + t * 0.55 * wHelix);
+          p.y += (sin(p.x * 4.6 - t * 2.6) * 0.06 + sin(p.x * 13.0 + t * 3.4) * 0.03) * wWave;
+          p.xy *= 1.0 + sin(t * 1.1) * 0.02 * wRing;
+
+          // in flight: a swirl through curl-like noise
+          float fly = sin(3.14159 * lf) * uFlight;
+          p += snoise3(p * 0.7 + vec3(0.0, t * 0.25, aSeed.w * 3.0)) * fly * 0.75;
+          p.xz = rot(p.xz, fly * (aSeed.w - 0.5) * 2.4);
+
+          // noise turbulence: the noisy chapters shiver, stirring makes everything shiver
+          float turb = uNoise + uStir * 0.7;
+          p += snoise3(p * 1.7 + vec3(t * 0.55, -t * 0.4, t * 0.3)) * turb * (0.17 + 0.1 * wStorm);
+
+          // scroll trails: particles smear along the direction of travel
+          p.y += uStir * uDir * (0.2 + aSeed.y * aSeed.y * 1.7);
+
+          // the pointer pushes particles away
+          vec2 dp = p.xy - uPointer.xy;
+          float r2 = dot(dp, dp);
+          p.xy += normalize(dp + 1e-5) * exp(-r2 * 5.0) * 0.42 * uPointerAmt;
+
+          // click shockwave
+          float age = t - uShockT;
+          vec2 ds = p.xy - uShockO.xy;
+          float rs = length(ds);
+          float shock = exp(-pow((rs - age * 2.4) * 4.0, 2.0)) * exp(-age * 1.4) * step(0.0, age);
+          p.xy += normalize(ds + 1e-5) * shock * 0.3;
+
+          // colour: noise is pink and violet, signal is teal, mint and blue
+          vec3 pink = mix(vec3(1.0, 0.33, 0.52), vec3(0.62, 0.36, 1.0), aSeed.z);
+          vec3 clean = mix(vec3(0.0, 0.86, 0.7), vec3(0.3, 0.68, 1.0), aSeed.z * aSeed.z);
+          vec3 col = mix(clean, pink, clamp(uPink + uStir * 0.25, 0.0, 1.0));
+          // data racing through the model's layers
+          float flow = smoothstep(0.86, 1.0, sin(B.x * 3.2 - t * 3.4 + B.y * 0.6) * 0.5 + 0.5) * wNet;
+          col += vec3(0.5, 1.0, 0.9) * flow * 1.4;
+          col += vec3(0.6, 1.0, 0.95) * shock * 2.0;
+
           vec4 mv = modelViewMatrix * vec4(p, 1.0);
-          vA = (0.35 + 0.65 * uChaos) * (0.5 + 0.5 * sin(uTime * 1.3 + aSeed));
-          vC = fract(aSeed * 0.37);
-          gl_PointSize = (1.4 + 2.2 * fract(aSeed)) * uPixel * uScale * (6.0 / -mv.z);
+          float tw = 0.55 + 0.45 * sin(t * (1.0 + aSeed.w * 2.0) + aSeed.x * 40.0);
+          vA = (0.3 + 0.7 * tw) * uFade * (1.0 + flow) * (1.0 + 0.7 * wStorm);
+          vCol = col;
+          gl_PointSize = (0.9 + aSeed.y * 2.3 + flow * 1.5 + fly * 1.2 + wStorm * 0.9) * uPixel * uSize * (${CAM_Z.toFixed(1)} / -mv.z);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
-        uniform float uChaos; uniform float uFade; varying float vA; varying float vC;
+        varying vec3 vCol; varying float vA;
         void main() {
           float d = length(gl_PointCoord - 0.5);
-          float a = smoothstep(0.5, 0.0, d) * vA * uFade;
+          float a = (smoothstep(0.5, 0.0, d) * 0.6 + smoothstep(0.18, 0.0, d) * 0.6) * vA;
           if (a < 0.01) discard;
-          vec3 noiseCol = mix(vec3(1.0, 0.36, 0.52), vec3(0.6, 0.35, 1.0), vC);
-          gl_FragColor = vec4(mix(vec3(0.0, 0.83, 0.67), noiseCol, uChaos), a);
+          gl_FragColor = vec4(vCol, a);
         }`,
-      transparent: true, depthWrite: false, ...ADD_LIGHT,
     })
-    group.add(new THREE.Points(pGeo, pMat))
+    group.add(new THREE.Points(geo, mat))
 
-    // ── Scroll choreography: viewport-space stops (x, y as 0..1 of the viewport, d = diameter / height) ──
+    // ── Where each chapter happens (scroll keyframes) and where it sits on screen ──
     const vw = () => window.innerWidth
     const vh = () => window.innerHeight
+    const narrow = () => vw() < 960
     const anchorState = () => {
       const a = document.querySelector('[data-orb-anchor]')
-      if (!a) return { x: 0.72, y: 0.5, d: 0.7 }
+      if (!a) return { x: 0.72, y: 0.5, d: 0.6 }
       const r = a.getBoundingClientRect()
-      return { x: (r.left + r.width / 2) / vw(), y: (r.top + r.height / 2) / vh(), d: r.width / vh() }
+      return { x: (r.left + r.width / 2) / vw(), y: (r.top + r.height / 2) / vh(), d: (r.width / vh()) * 0.62 }
     }
-    const narrow = () => vw() < 960
-    const stopsFor = () => {
-      const top = (sel) => { const el = document.querySelector(sel); return el ? el.getBoundingClientRect().top + window.scrollY : null }
-      const dl = top('#downloads'), st = top('#setup')
-      const end = document.documentElement.scrollHeight - vh()
-      const list = [{ at: 0, state: 'anchor', base: 1, fade: 1 }]
-      if (dl != null) list.push({ at: dl - vh() * 0.25, state: narrow() ? { x: 0.88, y: 0.12, d: 0.24 } : { x: 0.5, y: 0.62, d: 1.15 }, base: 0.55, fade: narrow() ? 0.5 : 0.28 })
-      if (st != null) list.push({ at: st - vh() * 0.1, state: narrow() ? { x: 0.9, y: 0.16, d: 0.26 } : { x: 0.955, y: 0.52, d: 0.42 }, base: 0.3, fade: 0.8 })
-      list.push({ at: Math.max(end - vh() * 0.15, (list[list.length - 1].at || 0) + 1), state: narrow() ? { x: 0.5, y: 0.3, d: 0.36 } : { x: 0.5, y: 0.34, d: 0.5 }, base: 0.0, fade: 1 })
-      return list
+    const PLACES = () => narrow()
+      ? [null, { x: 0.5, y: 0.3, d: 0.42 }, { x: 0.5, y: 0.5, d: 0.42 }, { x: 0.86, y: 0.5, d: 0.5 }, { x: 0.5, y: 0.34, d: 0.5 }]
+      : [null, { x: 0.5, y: 0.3, d: 0.55 }, { x: 0.5, y: 0.58, d: 0.78 }, { x: 0.935, y: 0.52, d: 0.78 }, { x: 0.5, y: 0.37, d: 0.56 }]
+    let keys = [0, 1, 2, 3, 4]
+    const keysFor = () => {
+      const end = Math.max(1, document.documentElement.scrollHeight - vh())
+      const k = [0]
+      for (const sel of ['#proof', '#downloads', '#setup']) {
+        const el = document.querySelector(sel)
+        let y = k[k.length - 1] + vh()
+        if (el) {
+          const r = el.getBoundingClientRect(), top = r.top + window.scrollY
+          // the wave forms while the proof card is still coming up from below
+          y = sel === '#proof' ? top - vh() * 0.45 : Math.min(top + r.height / 2 - vh() / 2, top + vh() * 0.1)
+        }
+        k.push(Math.min(end - 1, Math.max(k[k.length - 1] + 1, y)))
+      }
+      k.push(Math.max(end, k[k.length - 1] + 1))
+      return k
     }
-    let stops = stopsFor()
+    const stageAt = (y) => {
+      let i = 0
+      while (i < keys.length - 2 && y > keys[i + 1]) i++
+      const from = Math.max(keys[i], keys[i + 1] - vh() * 1.5)
+      const local = (y - from) / (keys[i + 1] - from)
+      return Math.min(4, i + smooth(0.12, 0.88, local))
+    }
 
     // ── Input ──
-    let chaos = 1, calmUntil = 0, pulseStart = -10, lastStop = 0
-    let scrollV = 0, lastScrollY = window.scrollY, lastScrollT = performance.now()
-    let px = -1, py = -1, pointerAmt = 0
-    const pointerDir = new THREE.Vector3(0, 0, 1)
+    let stir = 0, scrollV = 0, dir = 1, lastY = window.scrollY, lastT = performance.now()
+    let px = -1, py = -1, pointerAmt = 0, calmUntil = 0
     let mx = 0, my = 0, tmx = 0, tmy = 0
-    let hover = false
     const clock = new THREE.Clock()
-
-    const calm = (seconds) => {
-      const now = clock.getElapsedTime()
-      calmUntil = Math.max(calmUntil, now + seconds)
-      if (now - pulseStart > 1.0) pulseStart = now
-    }
-    const pulse = () => { const now = clock.getElapsedTime(); if (now - pulseStart > 1.0) pulseStart = now }
-    const onCut = () => calm(2.6)
     const onScroll = () => {
       const now = performance.now()
-      const dt = Math.max(1, now - lastScrollT)
-      const v = Math.abs(window.scrollY - lastScrollY) / dt * 1000   // px / s
+      const dy = window.scrollY - lastY
+      const v = (Math.abs(dy) / Math.max(1, now - lastT)) * 1000
+      if (Math.abs(dy) > 0.5) dir = dy > 0 ? 1 : -1
       scrollV = Math.max(scrollV * 0.6, v)
-      lastScrollY = window.scrollY
-      lastScrollT = now
+      lastY = window.scrollY
+      lastT = now
     }
-    const onMove = (e) => {
-      px = e.clientX; py = e.clientY
-      tmx = (e.clientX / vw() - 0.5) * 2
-      tmy = (e.clientY / vh() - 0.5) * 2
+    const onMove = (e) => { px = e.clientX; py = e.clientY; tmx = (px / vw() - 0.5) * 2; tmy = (py / vh() - 0.5) * 2 }
+    const onLeave = () => { px = py = -1 }
+    const toLocal = (cx, cy) => {
+      const worldH = 2 * CAM_Z * Math.tan((FOV * Math.PI) / 360)
+      const v = new THREE.Vector3((cx / vw() - 0.5) * worldH * camera.aspect, -(cy / vh() - 0.5) * worldH, 0)
+      group.updateMatrixWorld()
+      return group.worldToLocal(v)
     }
-    const onLeaveWindow = () => { px = py = -1 }
     const onDown = (e) => {
-      if (e.target.closest && e.target.closest('a, button, input, select, textarea, [role="tab"]')) return
-      const rp = ripples[rippleIdx++ % ripples.length]
-      rp.start = clock.getElapsedTime()
-      rp.line.visible = true
-      calm(1.6)
+      if (e.target.closest && e.target.closest('a, button, input, select, textarea, video, [role="tab"], [role="slider"]')) return
+      U.uShockO.value.copy(toLocal(e.clientX, e.clientY))
+      U.uShockT.value = U.uTime.value
+    }
+    const onCut = () => {
+      calmUntil = clock.getElapsedTime() + 2.6
+      U.uShockO.value.set(0, 0, 0)
+      U.uShockT.value = U.uTime.value
     }
     const onResize = () => {
       renderer.setSize(vw(), vh(), false)
       camera.aspect = vw() / vh()
       camera.updateProjectionMatrix()
-      stops = stopsFor()
+      keys = keysFor()
     }
-    window.addEventListener('noiseless:cut', onCut)
     window.addEventListener('scroll', onScroll, { passive: true })
     window.addEventListener('pointermove', onMove, { passive: true })
-    document.addEventListener('pointerleave', onLeaveWindow)
+    document.addEventListener('pointerleave', onLeave)
     window.addEventListener('pointerdown', onDown, { passive: true })
+    window.addEventListener('noiseless:cut', onCut)
     window.addEventListener('resize', onResize)
     onResize()
-    // layout settles after fonts/images load
-    const restop = setInterval(() => { stops = stopsFor() }, 1500)
+    const rekey = setInterval(() => { keys = keysFor() }, 1500)   // layout settles as fonts and media load
 
-    const raycaster = new THREE.Raycaster()
-    const ndc = new THREE.Vector2()
-    const hitSphere = new THREE.Sphere(new THREE.Vector3(), 1.05)
-    const inv = new THREE.Matrix4()
-    const hit = new THREE.Vector3()
+    // chapter rail: jump to a chapter
+    const rail = railRef.current
+    const items = rail ? [...rail.querySelectorAll('[data-ch]')] : []
+    const fill = rail ? rail.querySelector('.journey-fill') : null
+    const onRail = (e) => {
+      const b = e.target.closest('[data-ch]')
+      if (!b) return
+      window.scrollTo({ top: keys[+b.dataset.ch], behavior: reduced ? 'auto' : 'smooth' })
+    }
+    rail?.addEventListener('click', onRail)
+    let lastCh = -1
 
     let raf
     let last = 0
+    let noise = 1
     const frame = () => {
       raf = requestAnimationFrame(frame)
       if (document.hidden) return
       const t = clock.getElapsedTime()
       const dt = Math.min(0.05, t - last)
       last = t
-      const speed = reduced ? 0.35 : 1
 
-      // where am I in the choreography?
       const y = window.scrollY
-      let i = 0
-      while (i < stops.length - 2 && y > stops[i + 1].at) i++
-      const a = stops[i], b = stops[Math.min(i + 1, stops.length - 1)]
-      const f = b.at > a.at ? ease(Math.min(1, Math.max(0, (y - a.at) / (b.at - a.at)))) : 0
-      const sa = a.state === 'anchor' ? anchorState() : a.state
-      const sb = b.state === 'anchor' ? anchorState() : b.state
-      const sx = lerp(sa.x, sb.x, f), sy = lerp(sa.y, sb.y, f), sd = lerp(sa.d, sb.d, f)
-      const base = lerp(a.base, b.base, f)
-      const fade = lerp(a.fade, b.fade, f)
-      const stopNow = f > 0.5 ? i + 1 : i
-      if (stopNow !== lastStop) { lastStop = stopNow; pulse() }   // a light sweep as you enter each section (doesn't calm the stir)
-
-      // viewport -> world (at z = 0)
+      const s = stageAt(y)
+      const i = Math.min(3, Math.floor(s)), f = s - i
+      const places = PLACES()
+      const pa = i === 0 ? anchorState() : places[i]
+      const pb = places[i + 1]
+      // the shape travels on screen at the same pace it morphs
+      const sx = lerp(pa.x, pb.x, f), sy = lerp(pa.y, pb.y, f), sd = lerp(pa.d, pb.d, f)
       const worldH = 2 * CAM_Z * Math.tan((FOV * Math.PI) / 360)
-      const worldW = worldH * camera.aspect
-      holder.position.set((sx - 0.5) * worldW, -(sy - 0.5) * worldH, 0)
-      const scale = (sd * worldH) / ORB_SPAN
+      holder.position.set((sx - 0.5) * worldH * camera.aspect, -(sy - 0.5) * worldH, 0)
+      const scale = (sd * worldH) / 2
       holder.scale.setScalar(scale)
-      pMat.uniforms.uScale.value = scale
+      U.uSize.value = Math.min(1.5, Math.max(0.75, Math.sqrt(scale / 1.4)))
 
-      // pointer: dent where it meets the orb, hover calms
-      hover = false
+      // scroll speed -> stir (rises fast, settles in about half a second)
+      scrollV *= Math.pow(0.03, dt)
+      const target = Math.min(1, scrollV / 2600)
+      stir += (target - stir) * Math.min(1, dt * (target > stir ? 10 : 3))
+      U.uStir.value = reduced ? stir * 0.3 : stir
+      U.uDir.value += (dir - U.uDir.value) * Math.min(1, dt * 4)
+
+      const calmNow = t < calmUntil ? 0.12 : 1
+      const noiseTarget = at(NOISE, s) * calmNow
+      noise += (noiseTarget - noise) * Math.min(1, dt * (noiseTarget < noise ? 3 : 1.5))
+      U.uNoise.value = noise
+      U.uPink.value = at(PINK, s) * (t < calmUntil ? 0.35 : 1)
+      U.uFade.value = at(narrow() ? FADE_NARROW : FADE, s)
+      U.uStage.value = s
+      U.uTime.value += dt * (reduced ? 0.35 : 1) * (1 + stir * 0.8)
+      glow.material.opacity = at(GLOW, s) * (0.7 + 0.3 * (1 - noise))
+
+      // pointer: push particles aside, the hero storm shows it can be touched
+      let near = false
       if (px >= 0 && !coarse) {
-        ndc.set((px / vw()) * 2 - 1, -(py / vh()) * 2 + 1)
-        raycaster.setFromCamera(ndc, camera)
-        orb.updateMatrixWorld()
-        inv.copy(orb.matrixWorld).invert()
-        const ray = raycaster.ray.clone().applyMatrix4(inv)
-        if (ray.intersectSphere(hitSphere, hit)) {
-          hover = true
-          pointerDir.lerp(hit.normalize(), 0.35).normalize()
-        }
+        const lp = toLocal(px, py)
+        U.uPointer.value.copy(lp)
+        near = Math.hypot(lp.x, lp.y) < 1.5
       }
-      pointerAmt += ((hover ? 1 : 0) - pointerAmt) * Math.min(1, dt * 6)
-      uniforms.uPointerDir.value.copy(pointerDir)
-      uniforms.uPointerAmt.value = pointerAmt
-      document.body.classList.toggle('orb-hover', hover)
-
-      // noise level: section base + how fast you scroll; calm on cut / hover / click
-      scrollV *= Math.pow(0.04, dt)                       // decays in well under a second
-      const stir = Math.min(1, scrollV / 2400)
-      const target = hover || t < calmUntil ? 0.04 : Math.min(1, base + stir * 0.9)
-      chaos += (target - chaos) * Math.min(1, dt * (target < chaos ? 4.5 : 6.0))
-      uniforms.uChaos.value = chaos
-      uniforms.uTime.value = t * speed + stir * 0.6
-      uniforms.uPulse.value = Math.min(1, (t - pulseStart) / 1.1)
-      uniforms.uFade.value = fade
-
-      for (const ring of rings) {
-        const pos = ring.geo.attributes.position.array
-        const tt = t * speed
-        for (let k = 0; k < RING_POINTS; k++) {
-          const ang = (k / RING_POINTS) * Math.PI * 2
-          const tone = Math.sin(ang * ring.k + tt * ring.speed * 4) * 0.035
-          let noise = 0
-          for (let h = 0; h < ring.phases.length; h++) noise += Math.sin(ang * (17 + h * 11) + tt * (2 + h) + ring.phases[h]) / (h + 1.5)
-          const rr = ring.r + tone * (1 - chaos) + noise * 0.05 * chaos
-          pos[k * 3] = Math.cos(ang) * rr
-          pos[k * 3 + 1] = Math.sin(ang) * rr
-          pos[k * 3 + 2] = 0
-        }
-        ring.geo.attributes.position.needsUpdate = true
-        ring.line.rotation.z += dt * ring.speed * (0.25 + stir * 3.5) * speed   // scrolling spins the rings
-        ring.line.material.opacity = (0.45 + 0.4 * (1 - chaos)) * fade
-      }
-
-      for (const rp of ripples) {
-        const age = t - rp.start
-        if (age > 1.3) { rp.line.visible = false; continue }
-        const k = age / 1.3
-        rp.line.scale.setScalar(1.1 + ease(k) * 2.4)
-        rp.line.material.opacity = (1 - k) * 0.9
-      }
+      pointerAmt += ((near ? 1 : 0) - pointerAmt) * Math.min(1, dt * 5)
+      U.uPointerAmt.value = pointerAmt
+      document.body.classList.toggle('orb-hover', near && s < 0.5)
 
       mx += (tmx - mx) * 0.05
       my += (tmy - my) * 0.05
-      group.rotation.y = t * 0.12 * speed + mx * 0.35 + y * 0.0009       // scrolling turns the orb
-      group.rotation.x = Math.sin(t * 0.2) * 0.08 + my * 0.25
-      glow.material.opacity = (0.75 + 0.25 * (1 - chaos)) * fade
+      group.rotation.y = mx * 0.28
+      group.rotation.x = my * 0.18 + Math.sin(t * 0.2) * 0.04
+      group.rotation.z = Math.sin(s * Math.PI) * 0.06
+
+      // rail
+      const ch = Math.round(s)
+      if (ch !== lastCh) { lastCh = ch; items.forEach((el, k) => el.classList.toggle('on', k === ch)) }
+      if (fill) fill.style.transform = `scaleY(${s / 4})`
+
       renderer.render(scene, camera)
     }
     frame()
 
     return () => {
       cancelAnimationFrame(raf)
-      clearInterval(restop)
-      window.removeEventListener('noiseless:cut', onCut)
+      clearInterval(rekey)
+      rail?.removeEventListener('click', onRail)
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerleave', onLeaveWindow)
+      document.removeEventListener('pointerleave', onLeave)
       window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('noiseless:cut', onCut)
       window.removeEventListener('resize', onResize)
       document.body.classList.remove('orb-hover')
-      orb.geometry.dispose(); orbMat.dispose()
-      rings.forEach((r) => { r.geo.dispose(); r.line.material.dispose() })
-      ripples.forEach((r) => { r.line.geometry.dispose(); r.line.material.dispose() })
-      pGeo.dispose(); pMat.dispose()
+      geo.dispose(); mat.dispose()
       glow.material.map.dispose(); glow.material.dispose()
       renderer.dispose()
     }
   }, [])
 
-  return <canvas id="orb-canvas" ref={canvasRef} aria-hidden="true" />
+  return (
+    <>
+      <canvas id="orb-canvas" ref={canvasRef} aria-hidden="true" />
+      <nav className="journey" ref={railRef} aria-label="Page journey">
+        <div className="journey-track"><div className="journey-fill" /></div>
+        {CHAPTERS.map((c, k) => (
+          <button type="button" key={c} data-ch={k} className={k === 0 ? 'on' : ''}>
+            <i />
+            <span><small>0{k + 1}</small>{c}</span>
+          </button>
+        ))}
+      </nav>
+    </>
+  )
 }

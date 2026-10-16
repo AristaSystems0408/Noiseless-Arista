@@ -252,6 +252,36 @@ main {
   z-index: 3;
   pointer-events: none;
 }
+/* journey rail: where you are in the scroll story (wide screens only) */
+.journey {
+  position: fixed; left: 22px; top: 50%; transform: translateY(-50%);
+  z-index: 50; display: flex; flex-direction: column; gap: 22px; padding: 6px 0;
+}
+.journey-track { position: absolute; left: 5px; top: 12px; bottom: 12px; width: 1px; background: rgba(255,255,255,0.1); }
+.journey-fill {
+  position: absolute; inset: 0; transform-origin: top; transform: scaleY(0);
+  background: linear-gradient(180deg, #ff6b8a, #00d4aa 55%, #4dabff);
+  box-shadow: 0 0 8px rgba(0,212,170,0.6);
+}
+.journey button {
+  position: relative; display: flex; align-items: center; gap: 12px;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--text-mute);
+  font: 500 11px 'JetBrains Mono', monospace; letter-spacing: 0.16em; text-transform: uppercase;
+}
+.journey button i {
+  width: 11px; height: 11px; border-radius: 50%; flex: none;
+  background: var(--bg-deepest, #05070a); border: 1px solid rgba(255,255,255,0.25);
+  transition: background .4s, border-color .4s, box-shadow .4s, transform .4s;
+}
+.journey button span { opacity: 0; transform: translateX(-6px); transition: opacity .35s, transform .35s, color .35s; white-space: nowrap; }
+.journey button small { margin-right: 8px; opacity: 0.55; font-size: 10px; }
+.journey:hover button span, .journey button.on span { opacity: 1; transform: none; }
+.journey button.on { color: var(--text); }
+.journey button.on i { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px var(--accent); transform: scale(1.15); }
+.journey button:hover { color: var(--text); }
+.journey button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
+@media (max-width: 1279px) { .journey { display: none; } }
+
 .hero-orb-hint {
   position: absolute;
   left: 50%;
